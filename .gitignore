@@ -1,0 +1,8 @@
+.idea/*
+.ipynb*
+log/*
+dataset/cache/*
+*.pyc
+weights/hand_baseline/*
+weights/hand_lstm/*
+
