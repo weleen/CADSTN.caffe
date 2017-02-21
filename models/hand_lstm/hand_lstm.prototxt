@@ -415,7 +415,7 @@ layer {
     bottom: "reshape-cm"
     top: "lstm"
     recurrent_param {
-        num_output: 256
+        num_output: 1024
         weight_filler {
             type: "uniform"
             min: -0.01
@@ -440,16 +440,27 @@ layer {
 }
 
 layer {
-    name: "pred_joint"
-    type: "InnerProduct"
+    name: "concat-feature"
+    type: "Concat"
     bottom: "lstm"
-    top: "pred_joint"
+    bottom: "reshape-data"
+    top: "concat-feature"
+    concat_param {
+        axis: 2
+    }
+}
+
+layer {
+    name: "prediction"
+    type: "InnerProduct"
+    bottom: "concat-feature"
+    top: "prediction"
     param {
-        lr_mult: 10
+        lr_mult: 1
         decay_mult: 1
     }
     param {
-        lr_mult: 20
+        lr_mult: 2
         decay_mult: 0
     }
     inner_product_param {
@@ -468,16 +479,16 @@ layer {
 }
 
 layer {
-    name: "pred_joint"
+    name: "prediction"
     type: "InnerProduct"
-    bottom: "lstm"
-    top: "pred_joint"
+    bottom: "concat-feature"
+    top: "prediction"
     param {
-        lr_mult: 10
+        lr_mult: 1
         decay_mult: 1
     }
     param {
-        lr_mult: 20
+        lr_mult: 2
         decay_mult: 0
     }
     inner_product_param {
@@ -499,7 +510,7 @@ layer {
 layer {
     name: "loss"
     type: "EuclideanLoss"
-    bottom: "pred_joint"
+    bottom: "prediction"
     bottom: "reshape-joint"
     top: "loss"
 }

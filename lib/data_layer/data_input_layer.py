@@ -2,6 +2,8 @@
 
 __author__ = 'WuYiming'
 
+import sys
+sys.path.insert(0, '../../caffe/python')
 import caffe
 import numpy as np
 import random
@@ -14,14 +16,6 @@ train_frames = 16
 test_frames = 16
 train_buffer = 32
 test_buffer = 32
-
-def combineDataset(dataFile):
-    """
-    Combine the dataset .h5
-    :param dataFile: h5py type data
-    :return: a dict contain all data
-    """
-    pass
 
 class DataRead(object):
     """Read the data from h5py"""
@@ -50,7 +44,7 @@ class DataRead(object):
             size_1 = dataFile_1['com'].shape[0]
             size_2 = dataFile_2['com'].shape[0]
 
-            #print('size of dataset is {} and {}'.format(size_1, size_2))
+            print('size of dataset is {} and {}'.format(size_1, size_2))
 
             self.data['com'] = np.array(dataFile_1['com']).tolist()
             self.data['com'].extend(np.array(dataFile_2['com']).tolist())
@@ -83,7 +77,7 @@ class DataRead(object):
             self.data['depth'] = np.array(dataFile['depth'])
             self.data['joint'] = np.array(dataFile['joint'])
 
-        print('phase: '.format(self.phase))
+        print('phase: {}'.format(self.phase))
 
 
     def dataToSeq(self):
