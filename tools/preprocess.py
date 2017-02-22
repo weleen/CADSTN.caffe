@@ -1,7 +1,9 @@
+#!/usr/bin/env python
 """
 This is the data preprocess for hand pose estimation.
 """
 
+import _init_paths
 import numpy as np
 import scipy.io
 from data.importers import NYUImporter
@@ -9,13 +11,13 @@ from data.importers import ICVLImporter
 from data.dataset import NYUDataset
 import h5py
 
-def convertNYUSequenceToh5(Sequence):
+def convertNYUSequenceToh5(Sequence, cacheDir, datasetName):
     """
     :param Sequence: orderDict
     :return: None
     """
     config = Sequence.config
-    name = 'cache/{}_{}.h5'.format('NYU', Sequence.name)
+    name = '{}/{}_{}.h5'.format(cacheDir, datasetName, Sequence.name)
 
     Dataset = NYUDataset([Sequence])
     dpt, gt3D = Dataset.imgStackDepthOnly(Sequence.name)
@@ -53,21 +55,22 @@ def convertNYUSequenceToh5(Sequence):
 
 if __name__ == '__main__':
 
-    rng = np.random.RandomState(1234)
-
     print("create dataset")
 
-    di = NYUImporter('./dataset/NYU')
-    Seq1 = di.loadSequence('train', rng=rng)
+    cacheDir = './dataset/cache'
+    datasetName = 'NYU'
+
+    di = NYUImporter('./dataset/' + datasetName, cacheDir=cacheDir)
+    Seq1 = di.loadSequence('train')
     trainSeqs = [Seq1]
 
     Seq2_1 = di.loadSequence('test_1')
     Seq2_2 = di.loadSequence('test_2')
     testSeqs = [Seq2_1, Seq2_2]
 
-    convertNYUSequenceToh5(Seq1)
+    convertNYUSequenceToh5(Seq1, cacheDir, datasetName)
     print("Seq1 ok!")
-    convertNYUSequenceToh5(Seq2_1)
+    convertNYUSequenceToh5(Seq2_1, cacheDir, datasetName)
     print("Seq2_1 ok!")
-    convertNYUSequenceToh5(Seq2_2)
+    convertNYUSequenceToh5(Seq2_2, cacheDir, datasetName)
     print("Seq2_2 ok!")

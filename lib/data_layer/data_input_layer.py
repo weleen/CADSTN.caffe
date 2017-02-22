@@ -8,14 +8,13 @@ import caffe
 import numpy as np
 import random
 import h5py
-from multiprocessing import Pool
-from threading import Thread
+import yaml
 
 cachePath = '/home/wuyiming/git/Hand/dataset/cache/'
-train_frames = 16
-test_frames = 16
-train_buffer = 32
-test_buffer = 32
+# train_frames = 16
+# test_frames = 16
+# train_buffer = 32
+# test_buffer = 32
 
 class DataRead(object):
     """Read the data from h5py"""
@@ -146,13 +145,17 @@ class videoRead(caffe.Layer):
     def initialize(self):
         self.name = 'NYU'
         self.train_or_test = 'test'
-        self.buffer_size = test_buffer
-        self.frames = test_frames
+        #self.buffer_size = test_buffer
+        #self.frames = test_frames
         self.N = self.buffer_size * self.frames
         self.idx = 0
         self.path = cachePath
 
     def setup(self, bottom, top):
+
+        layer_params = yaml.load(self.param_str_)
+        self.buffer_size = layer_params['sequence_num']
+        self.frames = layer_params['sequence_size']
         self.initialize()
 
         dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames)
@@ -235,8 +238,8 @@ class NYUTrainSeq(videoRead):
     def initalize(self):
         self.name = 'NYU'
         self.train_or_test = 'train'
-        self.buffer_size = train_buffer # num videos processed per batch
-        self.frames = train_frames # length of processed clip
+        #self.buffer_size = train_buffer # num videos processed per batch
+        #self.frames = train_frames # length of processed clip
         self.N = self.buffer_size*self.frames
         self.idx = 0
         self.path = cachePath
@@ -245,8 +248,8 @@ class NYUTestSeq(videoRead):
     def initalize(self):
         self.name = 'NYU'
         self.train_or_test = 'test'
-        self.buffer_size = test_buffer
-        self.frames = test_frames
+        #self.buffer_size = test_buffer
+        #self.frames = test_frames
         self.N = self.buffer_size*self.frames
         self.idx = 0
         self.path = cachePath
