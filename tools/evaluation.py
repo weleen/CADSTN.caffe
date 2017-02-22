@@ -3,7 +3,7 @@
 Evaluate the prediction
 """
 
-import _init_paths
+from _init_paths import *
 import caffe
 import matplotlib
 import numpy as np
@@ -12,8 +12,10 @@ import matplotlib.pyplot as plt
 import os
 import time
 import scipy.io as scio
+from data_layer.data_input_layer import *
 
 from util.handpose_evaluation import NYUHandposeEvaluation
+from data.importers import NYUImporter
 
 DEBUG = True
 
@@ -51,7 +53,6 @@ def loadPredFile(filepath, estimation_mode='uvd'):
         joints = np.array(lines)
         n, d = joints.shape
         dim = 3
-
         return joints.reshape(n, d/dim, dim)
 
 def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu='gpu'):
@@ -66,7 +67,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
              file_name: file name store the joints
     """
     model_def = '../models/hand_' + model_name + '/hand_' + model_name + '.prototxt'
-    model_weights = './weights/hand_' + model_name + '/' + model_name + '_iter_' + weights_num + '.caffemodel'
+    model_weights = '../weights/hand_' + model_name + '/hand_' + model_name + '_iter_' + weights_num + '.caffemodel'
 
     assert os.path.isfile(model_def), '{} is not a file!'.foramt(model_def)
     assert os.path.isfile(model_weights), '{} is not a file!'.format(model_weights)
@@ -90,14 +91,22 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
 
     if gpu_or_cpu == 'gpu':
         caffe.set_mode_gpu()
-        caffe.set_device()
+        caffe.set_device(0)
 
     if DEBUG:
         print 'frame_size = ', frame_size
         print 'seq_size = ', seq_size
         print 'joint_size = ', joint_size / dim
         print 'dim = ', dim
-        print 'using {} to run {} dataset'.format(gpu_or_cpu, dataset)
+        print 'using {} to run {} test dataset'.format(gpu_or_cpu, dataset)
+
+    if store:
+        # store the predicted xyz into files
+        file_name = '../result/OURS/hand_' + model_name + '_' + weights_num + '.txt'
+
+        if os.path.isfile(file_name):
+            print '{} exists, read file directly.'.format(file_name)
+            return loadPredFile(file_name), file_name
 
     # calculate the predicted joints in xyz coordinate
     predicted_joints = np.array([None] * test_num)
@@ -112,33 +121,33 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
             if predicted_joints[int(ind) - 1] == None:  # add this sentence make run slow
                 predicted_joints[int(ind) - 1] = \
                     (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
-                     * net.blobs['config'].data[j][0] / 2 \
-                     + net.blobs['com'].data[j].reshape(1, 3)).copy()
+                    * net.blobs['config'].data[j][0] / 2 \
+                    + net.blobs['com'].data[j].reshape(1, 3)).copy()
     t_end = time.time()
     print 'time elapse {}'.format((t_end - t_start) / test_num)
 
     if store:
-        # store the predicted xyz into files
-        file_name = '../result/OURS/hand_' + model_name + '_' + weights_num + '.txt'
-
-        if os.path.isfile(file_name):
-            print '{} exists'.format(file_name)
-            return loadPredFile(file_name)
-
         print 'write the result in {}'.format(file_name)
-
         with open(file_name, 'w') as f:
             for i in xrange(predicted_joints.shape[0]):
                 for item in predicted_joints[i].reshape(14 * 3):
                     f.write("%s " % item)
                 f.write("\n")
+        predicted_joints = loadPredFile(file_name)
+    else:
+        # predicted_joints is inited by [None], so we must assign the variable again to
+        # get the right shape
+        predicted_joints = np.array([i for i in predicted_joints])
+        print predicted_joints.shape
+        file_name = None
 
     return predicted_joints, file_name
 
 
 if __name__ == '__main__':
 
-    gt_file = './dataset/NYU/test/joint.mat'
+    # test NYU dataset
+    gt_file = '../dataset/NYU/test/joint_data.mat'
     gt3D = loadGt(gt_file)
 
     if DEBUG:
@@ -147,17 +156,23 @@ if __name__ == '__main__':
     # predict joint by ourselves in xyz coordinate
     model = 'lstm'
     weight_num = '160000'
-    joints = predictJoints('lstm', '160000')
+    joints, file_name = predictJoints('lstm', '160000')
 
     eval_prefix = 'NYU_' + model + '_' + weight_num
-    if not os.path.exists('./eval/'+eval_prefix+'/'):
-        os.makedirs('./eval/'+eval_prefix+'/')
+    if not os.path.exists('../eval/'+eval_prefix+'/'):
+        os.makedirs('../eval/'+eval_prefix+'/')
+
+    if DEBUG:
+        print 'joints.shape = ', joints.shape
+        print 'joints[0] = ', joints[0]
+        print 'type(joints[0]) = ', type(joints[0])
+        print 'type(joints[0][0] = ', type(joints[0][0])
 
     hpe = NYUHandposeEvaluation(gt3D, joints)
-    hpe.subfolder += '/'+eval_prefix+'/'
+    hpe.subfolder += eval_prefix+'/'
     mean_error = hpe.getMeanError()
     max_error = hpe.getMaxError()
-    print("Train samples: {}, test samples: {}".format(train_data.shape[0], len(gt3D)))
+    #print("Train samples: {}, test samples: {}".format(train_data.shape[0], len(gt3D)))
     print("Mean error: {}mm, max error: {}mm".format(mean_error, max_error))
     print("MD score: {}".format(hpe.getMDscore(80)))
 
@@ -167,10 +182,11 @@ if __name__ == '__main__':
     #################################
     # BASELINE
     # Load the evaluation
-    data_baseline = di.loadBaseline('../dataset/NYU/test/test_predictions.mat', numpy.asarray(gt3D))
+    di = NYUImporter('../dataset/NYU/')
+    data_baseline = di.loadBaseline('../dataset/NYU/test/test_predictions.mat', np.asarray(gt3D))
 
     hpe_base = NYUHandposeEvaluation(gt3D, data_baseline)
-    hpe_base.subfolder += '/'+eval_prefix+'/'
+    hpe_base.subfolder += eval_prefix+'/'
     print("Mean error: {}mm".format(hpe_base.getMeanError()))
 
     hpe.plotEvaluation(eval_prefix, methodName='Our lstm',baseline=[('Tompson et al.',hpe_base)])

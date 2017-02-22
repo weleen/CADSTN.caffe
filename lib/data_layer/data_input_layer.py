@@ -18,7 +18,7 @@ cachePath = '/home/wuyiming/git/Hand/dataset/cache/'
 
 class DataRead(object):
     """Read the data from h5py"""
-    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=train_frames):
+    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16):
         """
         :param dataPath:
         :param name:
@@ -43,7 +43,7 @@ class DataRead(object):
             size_1 = dataFile_1['com'].shape[0]
             size_2 = dataFile_2['com'].shape[0]
 
-            print('size of dataset is {} and {}'.format(size_1, size_2))
+            print('size of dataset is test1: {} and test2: {}'.format(size_1, size_2))
 
             self.data['com'] = np.array(dataFile_1['com']).tolist()
             self.data['com'].extend(np.array(dataFile_2['com']).tolist())
@@ -153,9 +153,9 @@ class videoRead(caffe.Layer):
 
     def setup(self, bottom, top):
 
-        layer_params = yaml.load(self.param_str_)
-        self.buffer_size = layer_params['sequence_num']
-        self.frames = layer_params['sequence_size']
+        layer_params = yaml.load(self.param_str)
+        # read the layer param contain the sequence number and sequence size
+        self.buffer_size, self.frames = map(int, layer_params['sequence_num_size'].split())
         self.initialize()
 
         dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames)
@@ -238,8 +238,6 @@ class NYUTrainSeq(videoRead):
     def initalize(self):
         self.name = 'NYU'
         self.train_or_test = 'train'
-        #self.buffer_size = train_buffer # num videos processed per batch
-        #self.frames = train_frames # length of processed clip
         self.N = self.buffer_size*self.frames
         self.idx = 0
         self.path = cachePath
@@ -248,8 +246,6 @@ class NYUTestSeq(videoRead):
     def initalize(self):
         self.name = 'NYU'
         self.train_or_test = 'test'
-        #self.buffer_size = test_buffer
-        #self.frames = test_frames
         self.N = self.buffer_size*self.frames
         self.idx = 0
         self.path = cachePath

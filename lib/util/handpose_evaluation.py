@@ -85,7 +85,7 @@ class HandposeEvaluation(object):
         self.jointcolors = [(0.0, 0.0, 1.0), (0.0, 0.5, 0.0), (1.0, 0.0, 0.0), (0.0, 0.75, 0.75),
                             (0.75, 0, 0.75), (0.75, 0.75, 0), (0.0, 0.0, 0.0)]
 
-        self.subfolder = './eval/'
+        self.subfolder = '../eval/'
         self.visiblemask = numpy.ones((self.gt.shape[0], self.gt.shape[1], 3))
 
         self.jointNames = None

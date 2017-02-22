@@ -1,7 +1,6 @@
 test_iter: 258
 test_interval: 1000
-net: "../models/hand_lstm/hand_lstm.prototxt"
-#net: "../models/hand_lstm/hand_lstm_no_concate.prototxt"
+net: "../models/hand_lstm/hand_lstm_no_concate.prototxt"
 base_lr: 1e-4
 momentum: 0.9
 # momentum2: 0.999
@@ -13,8 +12,7 @@ display: 500
 max_iter: 200000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "../weights/hand_lstm/hand_lstm"
-# snapshot_prefix: "../weights/hand_lstm/hand_lstm_no_concate"
+snapshot_prefix: "../weights/hand_lstm_no_concate/hand_lstm_no_concate"
 # type: "Adam"
 type: "SGD"
 solver_mode: GPU
