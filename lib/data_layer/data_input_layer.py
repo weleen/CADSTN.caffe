@@ -2,8 +2,8 @@
 
 __author__ = 'WuYiming'
 
-import sys
-sys.path.insert(0, '../../caffe/python')
+#import sys
+#sys.path.insert(0, '../caffe/python')
 import caffe
 import numpy as np
 import random

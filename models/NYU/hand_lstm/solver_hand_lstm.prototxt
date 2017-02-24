@@ -1,9 +1,8 @@
 test_iter: 258
 test_interval: 1000
-net: "../models/hand_lstm/hand_lstm_samll_frame_size.prototxt"
+net: "models/NYU/hand_lstm/hand_lstm.prototxt"
 base_lr: 1e-4
 momentum: 0.9
-# momentum2: 0.999
 lr_policy: "step"
 stepsize: 50000
 gamma: 0.1
@@ -12,7 +11,5 @@ display: 500
 max_iter: 200000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "../weights/hand_lstm/hand_lstm_samll_frame_size"
-# type: "Adam"
-type: "SGD"
+snapshot_prefix: "weights/NYU/hand_lstm/hand_lstm"
 solver_mode: GPU

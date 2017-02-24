@@ -9,82 +9,147 @@ import scipy.io
 from data.importers import NYUImporter, ICVLImporter
 from data.dataset import NYUDataset, ICVLDataset
 import h5py
+import os
 
-def convertNYUSequenceToh5(Sequence, cacheDir, datasetName):
-    """
-    :param Sequence: orderDict
-    :return: None
-    """
-    config = Sequence.config
-    name = '{}/{}_{}.h5'.format(cacheDir, datasetName, Sequence.name)
+class convertDatasetToh5(object):
+    """base class for dataset transformation"""
+    def __init__(self, cacheDir, datasetName):
+        self.cacheDir = cacheDir
+        self.datasetName = datasetName
 
-    Dataset = NYUDataset([Sequence])
-    dpt, gt3D = Dataset.imgStackDepthOnly(Sequence.name)
+class convertNYUDatasetToh5(convertDatasetToh5):
+    """convert NYU dataset to h5"""
+    def __init__(self, cacheDir, dataName):
+        super(convertNYUDatasetToh5, self).__init__(cacheDir, dataName)
 
-    depth = []
-    gtorig = []
-    gtcrop = []
-    T = []
-    gt3Dorig = []
-    gt3Dcrop = []
-    com = []
-    fileName = []
+    def createSequence(self):
+        """create NYU Sequence, train and test sequence"""
+        print("create NYU dataset")
 
-    for i in xrange(len(Sequence.data)):
-        data = Sequence.data[i]
-        depth.append(data.dpt)
-        gtorig.append(data.gtorig)
-        gtcrop.append(data.gtcrop)
-        T.append(data.T)
-        gt3Dorig.append(data.gt3Dorig)
-        gt3Dcrop.append(data.gt3Dcrop)
-        com.append(data.com)
-        fileName.append(int(data.fileName[-11:-4]))
+        di = NYUImporter('./dataset/' + self.datasetName, cacheDir=self.cacheDir)
+
+        Seq1 = di.loadSequence('train') # train sequence
+        Seq2_1 = di.loadSequence('test_1') # test sequence 1
+        Seq2_2 = di.loadSequence('test_2') # test sequence 2
+
+        self.convert(Seq1)
+        print("{} Train Seq1 ok!".format(self.datasetName))
+        self.convert(Seq2_1)
+        print("{} Test Seq1 ok!".format(self.datasetName))
+        self.convert(Seq2_2)
+        print("{} Test Seq2 ok!".format(self.datasetName))
+
+    def convert(self, sequence):
+        """convert NYU sequence"""
+        config = sequence.config
+        name = '{}/{}_{}.h5'.format(self.cacheDir, self.datasetName, sequence.name)
+        if os.path.isfile(name):
+            print '{} exist, please check if h5 is right!'.format(name)
+            return
+
+        Dataset = NYUDataset([sequence])
+        dpt, gt3D = Dataset.imgStackDepthOnly(sequence.name)
+
+        depth = []
+        gtorig = []
+        gtcrop = []
+        T = []
+        gt3Dorig = []
+        gt3Dcrop = []
+        com = []
+        fileName = []
+
+        for i in xrange(len(sequence.data)):
+            data = sequence.data[i]
+            depth.append(data.dpt)
+            gtorig.append(data.gtorig)
+            gtcrop.append(data.gtcrop)
+            T.append(data.T)
+            gt3Dorig.append(data.gt3Dorig)
+            gt3Dcrop.append(data.gt3Dcrop)
+            com.append(data.com)
+            fileName.append(int(data.fileName[-11:-4]))
+
+        dataset = h5py.File(name, 'w')
+
+        dataset['com'] = np.asarray(com)
+        dataset['inds'] = np.asarray(fileName)
+        dataset['config'] = config['cube']
+        dataset['depth'] = np.asarray(dpt)
+        dataset['joint'] = np.asarray(gt3D)
+        dataset['gt3Dorig'] = np.asarray(gt3Dorig)
+        dataset.close()
 
 
-    dataset = h5py.File(name, 'w')
-    dataset['com'] = np.asarray(com)
-    dataset['inds'] = np.asarray(fileName)
-    dataset['config'] = config['cube']
-    dataset['depth'] = np.asarray(dpt)
-    dataset['joint'] = np.asarray(gt3D)
-    dataset['gt3Dorig'] = np.asarray(gt3Dorig)
-    dataset.close()
+class convertICVLDatasetToh5(convertDatasetToh5):
+    """convert ICVL dataset to h5"""
+    def __init__(self, cacheDir, dataName):
+        super(convertICVLDatasetToh5, self).__init__(cacheDir, dataName)
 
-def convertICVLSequenceToh5():
-    pass
+    def createSequence(self):
+        """create ICVL Sequence, train and test sequence"""
+        print("create ICVL dataset")
+
+        di = ICVLImporter('./dataset/' + self.datasetName, cacheDir=self.cacheDir)
+        Seq1 = di.loadSequence('train', ['0']) # use only the original dataset
+        Seq2_1 = di.loadSequence('test_seq_1')
+        Seq2_2 = di.loadSequence('test_seq_2')
+
+        self.convert(Seq1)
+        print("{} Train Seq1 ok!".format(self.datasetName))
+        self.convert(Seq2_1)
+        print("{} Test Seq1 ok!".format(self.datasetName))
+        self.convert(Seq2_2)
+        print("{} Test Seq2 ok!".format(self.datasetName))
+
+    def convert(self, sequence):
+        """convert ICVL sequence"""
+        config = sequence.config
+        name = '{}/{}_{}.h5'.format(self.cacheDir, self.datasetName, sequence.name)
+
+        if os.path.isfile(name):
+            print '{} exist, please check if h5 is right!'.format(name)
+            return
+
+        Dataset = ICVLDataset([sequence])
+        dpt, gt3D = Dataset.imgStackDepthOnly(sequence.name)
+
+        depth = []
+        gtorig = []
+        gtcrop = []
+        T = []
+        gt3Dorig = []
+        gt3Dcrop = []
+        com = []
+        fileName = []
+
+        for i in xrange(len(sequence.data)):
+            data = sequence.data[i]
+            depth.append(data.dpt)
+            gtorig.append(data.gtorig)
+            gtcrop.append(data.gtcrop)
+            T.append(data.T)
+            gt3Dorig.append(data.gt3Dorig)
+            gt3Dcrop.append(data.gt3Dcrop)
+            com.append(data.com)
+            fileName.append(int(data.fileName[(data.fileName.find('image_') + 6) : (data.fileName.find('.png') - 1)]))
+
+        dataset = h5py.File(name, 'w')
+
+        dataset['com'] = np.asarray(com)
+        dataset['inds'] = np.asarray(fileName)
+        dataset['config'] = config['cube']
+        dataset['depth'] = np.asarray(dpt)
+        dataset['joint'] = np.asarray(gt3D)
+        dataset['gt3Dorig'] = np.asarray(gt3Dorig)
+        dataset.close()
 
 if __name__ == '__main__':
 
     cacheDir = './dataset/cache'
 
-    # create NYU dataset
-    print("create NYU dataset")
+    NYUCreator = convertNYUDatasetToh5(cacheDir, 'NYU')
+    NYUCreator.createSequence()
 
-    datasetName = 'NYU'
-    di = NYUImporter('./dataset/' + datasetName, cacheDir=cacheDir)
-
-    Seq1 = di.loadSequence('train')
-    trainSeqs = [Seq1]
-
-    Seq2_1 = di.loadSequence('test_1')
-    Seq2_2 = di.loadSequence('test_2')
-    testSeqs = [Seq2_1, Seq2_2]
-
-    convertNYUSequenceToh5(Seq1, cacheDir, datasetName)
-    print("Seq1 ok!")
-    convertNYUSequenceToh5(Seq2_1, cacheDir, datasetName)
-    print("Seq2_1 ok!")
-    convertNYUSequenceToh5(Seq2_2, cacheDir, datasetName)
-    print("Seq2_2 ok!")
-
-    # create ICVL dataset
-    print("create ICVL dataset")
-
-    datasetName = 'ICVL'
-    di = ICVLImporter('./dataset' + datasetName, cacheDir=cacheDir)
-    Seq1 = di.loadSequence('train', ['0'])
-    trainSeqs = [Seq1]
-
-    Seq2 = di.loadSequence('test_seq_1')
-    testSeqs = [Seq2]
+    ICVLCreator = convertICVLDatasetToh5(cacheDir, 'ICVL')
+    ICVLCreator.createSequence()

@@ -66,8 +66,8 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
     :return: predicted_joints: predicted joints
              file_name: file name store the joints
     """
-    model_def = '../models/hand_' + model_name + '/hand_' + model_name + '.prototxt'
-    model_weights = '../weights/hand_' + model_name + '/hand_' + model_name + '_iter_' + weights_num + '.caffemodel'
+    model_def = '../models/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '.prototxt'
+    model_weights = '../weights/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '_iter_' + weights_num + '.caffemodel'
 
     assert os.path.isfile(model_def), '{} is not a file!'.foramt(model_def)
     assert os.path.isfile(model_weights), '{} is not a file!'.format(model_weights)
@@ -102,7 +102,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
 
     if store:
         # store the predicted xyz into files
-        file_name = '../result/OURS/hand_' + model_name + '_' + weights_num + '.txt'
+        file_name = '../result/OURS/' + dataset + '/hand_' + model_name + '_' + weights_num + '.txt'
 
         if os.path.isfile(file_name):
             print '{} exists, read file directly.'.format(file_name)
@@ -137,7 +137,9 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
     else:
         # predicted_joints is inited by [None], so we must assign the variable again to
         # get the right shape
-        predicted_joints = np.array([i for i in predicted_joints])
+        tmp = np.zeros((test_num, joint_size / dim, dim))
+        tmp = predicted_joints
+        predicted_joints = tmp
         print predicted_joints.shape
         file_name = None
 
@@ -154,9 +156,9 @@ if __name__ == '__main__':
         print 'gt3D.shape = ', gt3D.shape
 
     # predict joint by ourselves in xyz coordinate
-    model = 'lstm'
-    weight_num = '160000'
-    joints, file_name = predictJoints('lstm', '160000')
+    model = 'lstm_small_frame_size'
+    weight_num = '200000'
+    joints, file_name = predictJoints(model, weight_num)
 
     eval_prefix = 'NYU_' + model + '_' + weight_num
     if not os.path.exists('../eval/'+eval_prefix+'/'):

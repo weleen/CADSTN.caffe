@@ -8,7 +8,7 @@ layer {
   	top: "com"
   	top: "inds"
   	hdf5_data_param {
-    	source:"h5data/train.txt"
+    	source:"dataset/cache/NYU_train.txt"
     	batch_size: 512
   	}
   	include {
@@ -24,7 +24,7 @@ layer {
   	top: "com"
   	top: "inds"
   	hdf5_data_param {
-    	source:"h5data/test.txt"
+    	source:"dataset/cache/NYU_test.txt"
 	    batch_size: 64
   	}
   	include {

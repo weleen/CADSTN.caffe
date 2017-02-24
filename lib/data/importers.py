@@ -571,9 +571,17 @@ class NYUImporter(DepthImporter):
             dptFileName = '{0:s}/depth_1_{1:07d}.png'.format(objdir, line+1)
 
             if not os.path.isfile(dptFileName):
-                print("File {} does not exist!".format(dptFileName))
-                i += 1
-                continue
+                if seqName == 'test_1' and line <= 2439 and line >= 0:
+                    print("File {} does not exist!".format(dptFileName))
+                    i += 1
+                    continue
+                elif seqName == 'test_2' and line >= 2440 and line <= 8251:
+                    print("File {} does not exist!".format(dptFileName))
+                    i += 1
+                    continue
+                else:
+                    i += 1
+                    continue
             dpt = self.loadDepthMap(dptFileName)
 
             # joints in image coordinates
