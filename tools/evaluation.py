@@ -14,8 +14,8 @@ import time
 import scipy.io as scio
 from data_layer.data_input_layer import *
 
-from util.handpose_evaluation import NYUHandposeEvaluation
-from data.importers import NYUImporter
+from util.handpose_evaluation import NYUHandposeEvaluation,ICVLHandposeEvaluation
+from data.importers import NYUImporter,ICVLImporter
 
 DEBUG = True
 
@@ -119,10 +119,18 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
             row = j / seq_size
             col = j % seq_size
             if predicted_joints[int(ind) - 1] == None:  # add this sentence make run slow
-                predicted_joints[int(ind) - 1] = \
-                    (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
-                    * net.blobs['config'].data[j][0] / 2 \
-                    + net.blobs['com'].data[j].reshape(1, 3)).copy()
+                if model_name == 'baseline':
+                    if ind <= 2440:
+                        predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(14, 3) * \
+                                                          300 / 2 + net.blobs['com'].data[j].reshape(1, 3))
+                    else:
+                        predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(14, 3) * \
+                                                          300 * 0.87 / 2 + net.blobs['com'].data[j].reshape(1, 3))
+                else:
+                    predicted_joints[int(ind) - 1] = \
+                        (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
+                        * net.blobs['config'].data[j][0] / 2 \
+                        + net.blobs['com'].data[j].reshape(1, 3)).copy()
     t_end = time.time()
     print 'time elapse {}'.format((t_end - t_start) / test_num)
 

@@ -2,8 +2,6 @@
 
 __author__ = 'WuYiming'
 
-#import sys
-#sys.path.insert(0, '../caffe/python')
 import caffe
 import numpy as np
 import random
@@ -11,10 +9,6 @@ import h5py
 import yaml
 
 cachePath = '/home/wuyiming/git/Hand/dataset/cache/'
-# train_frames = 16
-# test_frames = 16
-# train_buffer = 32
-# test_buffer = 32
 
 class DataRead(object):
     """Read the data from h5py"""
@@ -26,7 +20,7 @@ class DataRead(object):
         self.name = name
         self.phase = phase
         self.cachePath = path
-        self.clip_length = clip_length
+        self.clip_length = clip_length # how many frames each sequence
         self.data = {}
 
     def loadData(self):
@@ -35,9 +29,11 @@ class DataRead(object):
         """
         import os
         if self.name == 'NYU' and self.phase == 'test':
+            # concate NYU test sequence together
             assert os.path.isfile(self.cachePath + self.name + '_' + self.phase + '_1.h5')\
             and os.path.isfile(self.cachePath + self.name + '_' + self.phase + '_2.h5'),\
-                '{} is not exists!'.format(self.cachePath + self.name + '_' + self.phase + '_2.h5')
+                '{} or {} is not exists!'.format((self.cachePath + self.name + '_' + self.phase + '_1.h5'), \
+                                                 (self.cachePath + self.name + '_' + self.phase + '_2.h5'))
             dataFile_1 = h5py.File(self.cachePath + self.name + '_' + self.phase + '_1.h5', 'r')
             dataFile_2 = h5py.File(self.cachePath + self.name + '_' + self.phase + '_2.h5', 'r')
             size_1 = dataFile_1['com'].shape[0]
@@ -51,10 +47,10 @@ class DataRead(object):
 
             self.data['inds'] = np.array(dataFile_1['inds']).tolist()
             self.data['inds'].extend(np.array(dataFile_2['inds']).tolist())
-            self.data['inds'] =np.array(self.data['inds'])
+            self.data['inds'] = np.array(self.data['inds'])
 
-            self.data['config'] = np.array(dataFile_1['config']).reshape(1, 3).repeat(size_1, axis=0).tolist()
-            self.data['config'].extend(np.array(dataFile_2['config']).reshape(1, 3).repeat(size_2, axis=0).tolist())
+            self.data['config'] = np.array(dataFile_1['config']).reshape(1, self.dim).repeat(size_1, axis=0).tolist()
+            self.data['config'].extend(np.array(dataFile_2['config']).reshape(1, self.dim).repeat(size_2, axis=0).tolist())
             self.data['config'] = np.array(self.data['config'])
 
             self.data['depth'] = np.array(dataFile_1['depth']).tolist()
@@ -64,7 +60,7 @@ class DataRead(object):
             self.data['joint'] = np.array(dataFile_1['joint']).tolist()
             self.data['joint'].extend(np.array(dataFile_2['joint']).tolist())
             self.data['joint'] = np.array(self.data['joint'])
-        else:
+        elif self.name == 'NYU' and self.phase == 'train':
             assert os.path.isfile(self.cachePath + self.name + '_' + self.phase + '.h5'),\
                 '{} file is not exists!'.format(self.phase)
             dataFile = h5py.File(self.cachePath + self.name + '_' + self.phase + '.h5', 'r')
@@ -72,11 +68,53 @@ class DataRead(object):
             print('size of dataset is {}'.format(size))
             self.data['com'] = np.array(dataFile['com'])
             self.data['inds'] = np.array(dataFile['inds'])
-            self.data['config'] = np.array(dataFile['config']).reshape(1, 3).repeat(size, axis=0)
+            self.data['config'] = np.array(dataFile['config']).reshape(1, self.dim).repeat(size, axis=0)
             self.data['depth'] = np.array(dataFile['depth'])
             self.data['joint'] = np.array(dataFile['joint'])
+        elif self.name == 'ICVL' and self.phase == 'test_1':
+            # test seq 1, we test ICVL dataset seperately
+            File1 = self.cachePath + self.name + '_' + self.phase + 'seq_1.h5'
+            assert os.path.isfile(File1), '{} is not exists!'.format(File1)
 
-        print('phase: {}'.format(self.phase))
+            dataFile_1 = h5py.File(File1, 'r')
+            size_1 = dataFile_1['com'].shape[0]
+
+            print('size of dataset is test1: {}'.format(size_1))
+
+            self.data['com'] = np.array(dataFile_1['com'])
+            self.data['inds'] = np.array(dataFile_1['inds'])
+            self.data['config'] = np.array(dataFile_1['config']).reshape(1, self.dim).repeat(size_1, axis=0)
+            self.data['depth'] = np.array(dataFile_1['depth'])
+            self.data['joint'] = np.array(dataFile_1['joint'])
+        elif self.name == 'ICVL' and self.phase == 'test_2':
+            File2 = self.cachePath + self.name + '_' + self.phase + 'seq_2.h5'
+            assert os.path.isfile(File2), '{} is not exists!'.format(File2)
+
+            dataFile_2 = h5py.File(File2, 'r')
+            size_2 = dataFile_2['com'].shape[0]
+
+            print('size of dataset is test1: {}'.format(size_2))
+
+            self.data['com'] = np.array(dataFile_2['com'])
+            self.data['inds'] = np.array(dataFile_2['inds'])
+            self.data['config'] = np.array(dataFile_2['config']).reshape(1, self.dim).repeat(size_2, axis=0)
+            self.data['depth'] = np.array(dataFile_2['depth'])
+            self.data['joint'] = np.array(dataFile_2['joint'])
+        elif self.name == 'ICVL' and self.phase == 'train':
+            assert os.path.isfile(self.cachePath + self.name + '_' + self.phase + '.h5'), \
+                '{} file is not exists!'.format(self.cachePath + self.name + '_' + self.phase + '.h5')
+            dataFile = h5py.File(self.cachePath + self.name + '_' + self.phase + '.h5', 'r')
+            size = dataFile['com'].shape[0]
+            print('size of dataset is {}'.format(size))
+            self.data['com'] = np.array(dataFile['com'])
+            self.data['inds'] = np.array(dataFile['inds'])
+            self.data['config'] = np.array(dataFile['config']).reshape(1, self.dim).repeat(size, axis=0)
+            self.data['depth'] = np.array(dataFile['depth'])
+            self.data['joint'] = np.array(dataFile['joint'])
+        else:
+            raise Exception('unknow dataset {} or phase {}.'.format(self.name, self.phase))
+
+        print('dataset: {} phase: {}'.format(self.name, self.phase))
 
 
     def dataToSeq(self):
@@ -143,16 +181,18 @@ class sequenceGenerator(object):
 class videoRead(caffe.Layer):
 
     def initialize(self):
+        """set the defualt param, overwrite it"""
         self.name = 'NYU'
         self.train_or_test = 'test'
-        #self.buffer_size = test_buffer
-        #self.frames = test_frames
         self.N = self.buffer_size * self.frames
         self.idx = 0
         self.path = cachePath
+        self.joints = 14
+        self.imagesize = 128
+        self.dim = 3
 
     def setup(self, bottom, top):
-
+        """setup for layer"""
         layer_params = yaml.load(self.param_str)
         # read the layer param contain the sequence number and sequence size
         self.buffer_size, self.frames = map(int, layer_params['sequence_num_size'].split())
@@ -173,15 +213,15 @@ class videoRead(caffe.Layer):
 
         for top_index, name in enumerate(self.top_names):
             if name == 'depth':
-                shape = (self.N, 1, 128, 128)
+                shape = (self.N, 1, self.imagesize, self.imagesize)
             elif name == 'joint':
-                shape = (self.N, 3 * 14)
+                shape = (self.N, self.dim * self.joints)
             elif name == 'clip_markers':
                 shape = (self.N, )
             elif name == 'com':
-                shape = (self.N, 3)
+                shape = (self.N, self.dim)
             elif name == 'config':
-                shape = (self.N, 3)
+                shape = (self.N, self.dim)
             elif name == 'inds':
                 shape = (self.N, )
             top[top_index].reshape(*shape)
@@ -192,12 +232,12 @@ class videoRead(caffe.Layer):
     def forward(self, bottom, top):
         data = self.sequence_generator()
 
-        depth = np.array([None]*self.N)
-        joint = np.array([None]*self.N)
-        cm = np.array([None]*self.N)
-        com = np.array([None]*self.N)
-        config = np.array([None]*self.N)
-        inds = np.array([None]*self.N)
+        depth = np.zeros((self.N, 1, self.imagesize, self.imagesize))
+        joint = np.zeros((self.N, self.dim * self.joints))
+        cm = np.zeros((self.N, ))
+        com = np.zeros((self.N, self.dim))
+        config = np.zeros((self.N, self.dim))
+        inds = np.zeros((self.N))
         #print 'data = ',data
         #print 'data.shape = ',data.shape
 
@@ -206,7 +246,7 @@ class videoRead(caffe.Layer):
             for j in xrange(self.buffer_size):
                 idx = i*self.buffer_size + j
                 depth[idx] = data[j][i]['depth']
-                joint[idx] = data[j][i]['joint'].reshape(14*3)
+                joint[idx] = data[j][i]['joint'].reshape(self.joints*3)
                 cm[idx] = data[j][i]['clip_markers']
                 com[idx] = data[j][i]['com']
                 config[idx] = data[j][i]['config']
@@ -241,6 +281,7 @@ class NYUTrainSeq(videoRead):
         self.N = self.buffer_size*self.frames
         self.idx = 0
         self.path = cachePath
+        self.joints = 14
 
 class NYUTestSeq(videoRead):
     def initalize(self):
@@ -249,4 +290,31 @@ class NYUTestSeq(videoRead):
         self.N = self.buffer_size*self.frames
         self.idx = 0
         self.path = cachePath
+        self.joints = 14
 
+class ICVLTrainSeq(videoRead):
+    def initialize(self):
+        self.name = 'ICVL'
+        self.train_or_test = 'train'
+        self.N = self.buffer_size*self.frames
+        self.idx = 0
+        self.path = cachePath
+        self.joints = 16
+
+class ICVLTestSeq1(videoRead):
+    def initialize(self):
+        self.name = 'ICVL'
+        self.train_or_test = 'test_1'
+        self.N = self.buffer_size*self.frames
+        self.idx = 0
+        self.path = cachePath
+        self.joints = 16
+
+class ICVLTestSeq2(videoRead):
+    def initialize(self):
+        self.name = 'ICVL'
+        self.train_or_test = 'test_2'
+        self.N = self.buffer_size*self.frames
+        self.idx = 0
+        self.path = cachePath
+        self.joints = 16
