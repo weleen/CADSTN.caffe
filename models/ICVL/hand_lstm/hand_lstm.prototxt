@@ -11,7 +11,7 @@ layer {
     top: "inds"
     python_param {
         module: "data_input_layer"
-        layer: "NYUTrainSeq"
+        layer: "ICVLTrainSeq"
         param_str: "'sequence_num_size': '32 16'"
     }
     include: {
@@ -30,7 +30,7 @@ layer {
     top: "inds"
     python_param {
         module: "data_input_layer"
-        layer: "NYUTestSeq"
+        layer: "ICVLTestSeq1"
         param_str: "'sequence_num_size': '1 16'"
     }
     include: {

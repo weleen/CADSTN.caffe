@@ -22,21 +22,14 @@ You should have received a copy of the GNU General Public License
 along with DeepPrior.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import sys
+sys.path.insert(0, '../../caffe/python')
+import caffe
 from multiprocessing import Process, Queue, Value
 import cv2
 import time
 import numpy
-from util.handdetector import HandDetector
-
-__author__ = "Markus Oberweger <oberweger@icg.tugraz.at>"
-__copyright__ = "Copyright 2015, ICG, Graz University of Technology, Austria"
-__credits__ = ["Markus Oberweger"]
-__license__ = "GPL"
-__version__ = "1.0"
-__maintainer__ = "Markus Oberweger"
-__email__ = "oberweger@icg.tugraz.at"
-__status__ = "Development"
-
+from handdetector import HandDetector
 
 class RealtimeHandposePipeline(object):
     """
@@ -52,7 +45,7 @@ class RealtimeHandposePipeline(object):
     HAND_LEFT = 0
     HAND_RIGHT = 1
 
-    def __init__(self, poseNet, config, di, comrefNet=None):
+    def __init__(self, di, config, netPath, netWeight):
         """
         Initialize data
         :param poseNet: network for pose estimation
@@ -64,13 +57,10 @@ class RealtimeHandposePipeline(object):
 
         # handpose CNN
         self.importer = di
-        self.poseNet = poseNet
-        self.comrefNet = comrefNet
         # configuration
         self.config = config
         self.initialconfig = config
         # synchronization between threads
-        self.queue = Queue()
         self.stop = Value('b', False)
         # for calculating FPS
         self.lastshow = time.time()
@@ -85,189 +75,11 @@ class RealtimeHandposePipeline(object):
         self.tracking = False
         self.lastcom = (0, 0, 0)
 
-        # Force network to compile output in the beginning
-        self.poseNet.computeOutput(numpy.zeros(self.poseNet.cfgParams.inputDim, dtype='float32'))
-        if self.comrefNet is not None:
-            self.comrefNet.computeOutput([numpy.zeros(sz, dtype='float32') for sz in self.comrefNet.cfgParams.inputDim])
-
-    def threadProducerFiles(self, filenames):
-        """
-        Thread that produces frames from files
-        :param filenames: list of filenames
-        :return: None
-        """
-
-        fid = 0
-        for f in filenames:
-            if self.stop.value:
-                break
-            # Capture frame-by-frame
-            print("Produce frame: {}".format(fid))
-            start = time.time()
-            frame = self.importer.loadDepthMap(f)
-            print("{}ms loading".format((time.time() - start)*1000.))
-
-            startd = time.time()
-            crop, M, com3D = self.detect(frame.copy())
-            print("{}ms detection".format((time.time() - startd)*1000.))
-
-            frm = {'fid': fid, 'crop': crop, 'com3D': com3D, 'frame': frame, 'M': M}
-            self.queue.put(frm)
-            fid += 1
-        # we are done
-        self.stop.value = True
-        print "Exiting producer..."
-        return True
-
-    def threadProducerVideo(self, device):
-        """
-        Thread that produces frames from video capture
-        :param device: device
-        :return: None
-        """
-
-        fid = 0
-        while True:
-            if self.stop.value:
-                break
-            # Capture frame-by-frame
-            start = time.time()
-            ret, frame = device.getDepth()
-            if ret is False:
-                print "Error while reading frame."
-                time.sleep(0.1)
-                continue
-            print("{}ms capturing".format((time.time() - start)*1000.))
-
-            startd = time.time()
-            crop, M, com3D = self.detect(frame.copy())
-            print("{}ms detection".format((time.time() - startd)*1000.))
-
-            frm = {'fid': fid, 'crop': crop, 'com3D': com3D, 'frame': frame, 'M': M}
-            self.queue.put(frm)
-            fid += 1
-        # we are done
-        self.stop.value = True
-        print "Exiting producer..."
-        return True
-
-    def threadConsumer(self):
-        """
-        Thread that consumes the frames, estimate the pose and display
-        :return: None
-        """
-        
-        while True:
-            if self.stop.value:
-                break
-            try:
-                frm = self.queue.get(block=False)
-            except:
-                if not self.stop.value:
-                    continue
-                else:
-                    break
-
-            startp = time.time()
-            pose = self.estimatePose(frm['crop']) * self.config['cube'][2]/2. + frm['com3D']
-            print("{}ms pose".format((time.time() - startp)*1000.))
-
-            # Display the resulting frame
-            starts = time.time()
-            img = self.show(frm['frame'], pose, frm['M'])
-            img = self.addStatusBar(img)
-            cv2.imshow('frame', img)
-            self.lastshow = time.time()
-            self.processKey(cv2.waitKey(1) & 0xFF)
-            print("{}ms display".format((time.time() - starts)*1000.))
-
-        cv2.destroyAllWindows()
-        print "Exiting consumer..."
-        return True
-
-    def processFilesThreaded(self, filenames):
-        """
-        Run detector from files
-        :param filenames: filenames to load
-        :return: None
-        """
-
-        allstart = time.time()
-        if not isinstance(filenames, list):
-            raise ValueError("Files must be list of filenames.")
-
-        p = Process(target=self.threadProducerFiles, args=[filenames])
-        p.daemon = True
-        c = Process(target=self.threadConsumer, args=[])
-        c.daemon = True
-        p.start()
-        c.start()
-
-        c.join()
-        p.join()
-
-        print("DONE in {}s".format((time.time() - allstart)))
-
-    def processVideoThreaded(self, device):
-        """
-        Use video as input
-        :param device: device id
-        :return: None
-        """
-
-        p = Process(target=self.threadProducerVideo, args=[device])
-        p.daemon = True
-        c = Process(target=self.threadConsumer, args=[])
-        c.daemon = True
-        p.start()
-        c.start()
-
-        c.join()
-        p.join()
-
-    def processVideo(self, device):
-        """
-        Use video as input
-        :param device: device id
-        :return: None
-        """
-
-        i = 0
-        while True:
-            i += 1
-            if self.stop.value:
-                break
-            # Capture frame-by-frame
-            start = time.time()
-            ret, frame = device.getDepth()
-            if ret is False:
-                print "Error while reading frame."
-                time.sleep(0.1)
-                continue
-            print("{}ms capturing".format((time.time() - start)*1000.))
-
-            startd = time.time()
-            crop, M, com3D = self.detect(frame.copy())
-            print("{}ms detection".format((time.time() - startd)*1000.))
-
-            startp = time.time()
-            pose = self.estimatePose(crop) * self.config['cube'][2]/2. + com3D
-            print("{}ms pose".format((time.time() - startp)*1000.))
-
-            # Display the resulting frame
-            starts = time.time()
-            img = self.show(frame, pose)
-            img = self.addStatusBar(img)
-            cv2.imshow('frame', img)
-            self.lastshow = time.time()
-            cv2.imshow('crop', crop)
-            self.processKey(cv2.waitKey(1) & 0xFF)
-            print("{}ms display".format((time.time() - starts)*1000.))
-
-            print("-> {}ms per frame".format((time.time() - start)*1000.))
-
-        # When everything done, release the capture
-        cv2.destroyAllWindows()
+        # caffe net init
+        self.net = caffe.Net(netPath, netWeight, caffe.TEST)
+        caffe.set_mode_gpu()
+        caffe.set_device(0)
+        self.frameSize = self.net.blobs['depth'].shape[0]
 
     def processFiles(self, filenames):
         """
@@ -280,35 +92,64 @@ class RealtimeHandposePipeline(object):
         if not isinstance(filenames, list):
             raise ValueError("Files must be list of filenames.")
 
-        i = 0
-        for f in filenames:
-            i += 1
+        ind = 0
+        result = numpy.array([None] * len(filenames))
+        cm = numpy.ones((self.frameSize, 1, 1, 1))
+        cm[0] = 0.
+        # sequence size
+        for i in range(numpy.int(numpy.ceil(len(filenames) / float(self.frameSize)))):
             if self.stop.value:
                 break
-            # Capture frame-by-frame
+                
             start = time.time()
-            frame = self.importer.loadDepthMap(f)
-            print("{}ms loading".format((time.time() - start)*1000.))
+            frames = numpy.array([None] * self.frameSize)
+            for j in xrange(self.frameSize): # frame size
+                if ind < len(filenames):
+                    f = '.' + filenames[ind]
+                    ind += 1
+                else:
+                    f = '.' + filenames[ind - 1]
+                print('load {}'.format(f))
+                frames[j] = self.importer.loadDepthMap(f)
+            print('{}ms load {} frames'.format((time.time() - start)*1000., self.frameSize))
+                              
+            started = time.time()
+            crop = []
+            M = []
+            com3D = []
+            for j in xrange(self.frameSize):
+                cropj, Mj, com3Dj = self.detect(frames[j].copy())
+                crop.append(cropj)
+                com3D.append(com3Dj)
+                M.append(Mj)
+            print('{}ms detect {} frames'.format((time.time() - started)*1000., self.frameSize))
+                              
 
-            startd = time.time()
-            crop, M, com3D = self.detect(frame.copy())
-            print("{}ms detection".format((time.time() - startd)*1000.))
-
+            crop = numpy.array(crop)
+            crop.shape = (crop.shape[0], 1, crop.shape[1], crop.shape[2])
+            com3D = numpy.array(com3D)
+            com3D.shape = (com3D.shape[0], 1, com3D.shape[1])
             startp = time.time()
-            pose = self.estimatePose(crop) * self.config['cube'][2]/2. + com3D
-            print("{}ms pose".format((time.time() - startp)*1000.))
-
+            self.net.blobs['depth'].data[...] = crop
+            self.net.blobs['clip_markers'].data[...] = cm
+            self.net.forward()
+            pred = self.net.blobs['pred_joint'].data
+            poses = pred.reshape(pred.shape[0], pred.shape[2] / com3D.shape[2], com3D.shape[2]) * self.config['cube'][2] / 2 + com3D
+            assert poses.shape[0] == self.frameSize, 'size mismatch! {} not equal to {}'.format(poses.shape[0], self.frameSize)
+            print('{}ms pose {} frames'.format((time.time() - startp)*1000., self.frameSize))
+                              
             # Display the resulting frame
-            starts = time.time()
-            img = self.show(frame, pose)
-            img = self.addStatusBar(img)
-            cv2.imshow('frame', img)
-            self.lastshow = time.time()
-            cv2.imshow('crop', crop)
-            self.processKey(cv2.waitKey(1) & 0xFF)
-            print("{}ms display".format((time.time() - starts)*1000.))
+            for j in xrange(self.frameSize):
+                starts = time.time()
+                img = self.show(frames[j], poses[j])
+                img = self.addStatusBar(img)
+                cv2.imshow('frame', img)
+                self.lastshow = time.time()
+                cv2.imshow('crop', crop[j][0])
+                self.processKey(cv2.waitKey(1) & 0xFF)
+                print("{}ms display".format((time.time() - starts)*1000.))
 
-            print("-> {}ms per frame".format((time.time() - start)*1000.))
+            print("-> {}ms per {} frames".format((time.time() - start)*1000., self.frameSize))
 
         print("DONE in {}s".format((time.time() - allstart)))
         cv2.destroyAllWindows()
@@ -320,7 +161,7 @@ class RealtimeHandposePipeline(object):
         :return: cropped image, transformation, center
         """
 
-        hd = HandDetector(frame, self.config['fx'], self.config['fy'], importer=self.importer, refineNet=self.comrefNet)
+        hd = HandDetector(frame, self.config['fx'], self.config['fy'], importer=self.importer)
         doHS = (self.state == self.STATE_INIT)
         if self.tracking and not numpy.allclose(self.lastcom, 0):
             loc, handsz = hd.track(self.lastcom, self.config['cube'], doHandSize=doHS)
@@ -341,9 +182,9 @@ class RealtimeHandposePipeline(object):
             self.handsizes = []
 
         if numpy.allclose(loc, 0):
-            return numpy.zeros((self.poseNet.cfgParams.inputDim[2], self.poseNet.cfgParams.inputDim[3]), dtype='float32'), numpy.eye(3), loc
+            return numpy.zeros((self.net.blobs['depth'].data.shape[2], self.net.blobs['depth'].data.shape[3]), dtype='float32'), numpy.eye(3), loc
         else:
-            crop, M, com = hd.cropArea3D(loc, size=self.config['cube'], dsize=(self.poseNet.layers[0].cfgParams.inputDim[2], self.poseNet.layers[0].cfgParams.inputDim[3]))
+            crop, M, com = hd.cropArea3D(loc, size=self.config['cube'], dsize=(self.net.blobs['depth'].data.shape[2], self.net.blobs['depth'].data.shape[3]))
             com3D = self.importer.jointImgTo3D(com)
             crop[crop == 0] = com3D[2] + (self.config['cube'][2] / 2.)
             crop[crop >= com3D[2] + (self.config['cube'][2] / 2.)] = com3D[2] + (self.config['cube'][2] / 2.)

@@ -13,11 +13,11 @@ import os
 import time
 import scipy.io as scio
 from data_layer.data_input_layer import *
-
+from data.transformations import transformPoint2D
 from util.handpose_evaluation import NYUHandposeEvaluation,ICVLHandposeEvaluation
 from data.importers import NYUImporter,ICVLImporter
 
-DEBUG = True
+DEBUG = False
 
 def loadGt(gt_file):
     """
@@ -78,7 +78,11 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
     net = caffe.Net(model_def, model_weights, caffe.TEST)
 
     # extract seq_size (video num), frame_size (frames in video) and joint_size (dimension need to regress) from the blob
-    frame_size, seq_size, joint_size = net.blobs['pred_joint'].data.shape
+    if model_name == 'baseline':
+        frame_size, joint_size = net.blobs['joint_pred'].data.shape
+        seq_size = 1
+    else:
+        frame_size, seq_size, joint_size = net.blobs['pred_joint'].data.shape
     dim = 3 # estimate 3 dimension x, y and z
 
     # recognize different dataset
@@ -192,7 +196,7 @@ if __name__ == '__main__':
     #################################
     # BASELINE
     # Load the evaluation
-    di = NYUImporter('../dataset/NYU/')
+    di = NYUImporter('../dataset/NYU/', cacheDir='../dataset/cache/')
     data_baseline = di.loadBaseline('../dataset/NYU/test/test_predictions.mat', np.asarray(gt3D))
 
     hpe_base = NYUHandposeEvaluation(gt3D, data_baseline)
@@ -201,16 +205,19 @@ if __name__ == '__main__':
 
     hpe.plotEvaluation(eval_prefix, methodName='Our lstm',baseline=[('Tompson et al.',hpe_base)])
 
-    # ind = 0
-    # for i in testSeqs[0].data:
-    #     if ind % 20 != 0:
-    #         ind += 1
-    #         continue
-    #     jt = joints[ind]
-    #     jtI = di.joints3DToImg(jt)
-    #     for joint in range(jt.shape[0]):
-    #         t=transformPoint2D(jtI[joint], i.T)
-    #         jtI[joint, 0] = t[0]
-    #         jtI[joint, 1] = t[1]
-    #     hpe.plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix, ind))
-    #     ind+=1
+    Seq2_1 = di.loadSequence('test_1')
+    Seq2_2 = di.loadSequence('test_2')
+    testSeqs = [Seq2_1, Seq2_2]
+    ind = 0
+    for i in testSeqs[0].data:
+        if ind % 20 != 0:
+            ind += 1
+            continue
+        jt = joints[ind]
+        jtI = di.joints3DToImg(jt)
+        for joint in range(jt.shape[0]):
+            t=transformPoint2D(jtI[joint], i.T)
+            jtI[joint, 0] = t[0]
+            jtI[joint, 1] = t[1]
+        hpe.plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix, ind))
+        ind+=1

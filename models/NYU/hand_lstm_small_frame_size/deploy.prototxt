@@ -1,36 +1,33 @@
-name: "baseline"
+name: "hand-lstm-small-frame-size"
 
 layer {
 	name: "data"
-  	type: "HDF5Data"
-  	top: "depth"
-  	top: "joint"
-  	top: "com"
-  	top: "inds"
-  	hdf5_data_param {
-    	source:"/home/wuyiming/git/Hand/dataset/cache/ICVL_train.txt"
-    	batch_size: 512
-  	}
-  	include {
-    	phase: TRAIN
-  	}
+	type: "Input"
+	top: "depth"
+	input_param {
+		shape: {
+			dim: 3
+			dim: 1
+			dim: 128
+			dim: 128
+		}
+	}
 }
 
 layer {
-  	name: "data"
-  	type: "HDF5Data"
-  	top: "depth"
-  	top: "joint"
-  	top: "com"
-  	top: "inds"
-  	hdf5_data_param {
-    	source:"/home/wuyiming/git/Hand/dataset/cache/ICVL_test.txt"
-	    batch_size: 64
-  	}
-  	include {
-    	phase: TEST
-  	}
+    name: "clip_markers"
+    type: "Input"
+    top: "clip_markers"
+    input_param {
+        shape: {
+            dim: 3
+            dim: 1
+            dim: 1
+            dim: 1
+        }
+    }
 }
+
 # conv1
 
 layer {
@@ -73,7 +70,7 @@ layer {
 		bias_filler {
 			type: "constant"
 		}
-	}	
+	}
 }
 
 layer {
@@ -300,61 +297,94 @@ layer {
 }
 
 layer {
-	name: "fc2"
-	type: "InnerProduct"
-	bottom: "fc1"
-	top: "fc2"
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
+    name: "reshape-data"
+    type: "Reshape"
+    bottom: "fc1"
+    top: "reshape-data"
+    reshape_param {
+        shape {
+            dim: 3
+            dim: 1
+            dim: 2048
+        }
+    }
 }
 
 layer {
-	name: "drop2"
+    name: "reshape-cm"
+    type: "Reshape"
+    bottom: "clip_markers"
+    top: "reshape-cm"
+    reshape_param {
+        shape {
+            dim: 3
+            dim: 1
+        }
+    }
+}
+
+layer {
+    name: "lstm"
+    type: "LSTM"
+    bottom: "reshape-data"
+    bottom: "reshape-cm"
+    top: "lstm"
+    recurrent_param {
+        num_output: 1024
+        weight_filler {
+            type: "uniform"
+            min: -0.01
+            max: 0.01
+        }
+        bias_filler {
+            type: "constant"
+            value: 0
+        }
+    }
+}
+
+layer {
+    name: "lstm-drop"
     type: "Dropout"
-    bottom: "fc2"
-    top: "fc2"
+    bottom: "lstm"
+    top: "lstm"
     dropout_param {
-    	dropout_ratio: 0.5
+        dropout_ratio: 0.5
     }
 }
 
 layer {
-	name: "pred"
+    name: "concat-feature"
+    type: "Concat"
+    bottom: "lstm"
+    bottom: "reshape-data"
+    top: "concat-feature"
+    concat_param {
+        axis: 2
+    }
+}
+
+layer {
+    name: "pred_joint"
     type: "InnerProduct"
-    bottom: "fc2"
-    top: "joint_pred"
-    inner_product_param {
-    	num_output: 48 # 3*J
+    bottom: "concat-feature"
+    top: "pred_joint"
+    param {
+        lr_mult: 1
+        decay_mult: 1
     }
-}
-
-layer {
-	name: "dummyloss"
-	type: "EuclideanLoss"
-	bottom: "joint_pred"
-	bottom: "joint"
-	top: "dummyloss"
-	loss_weight: 0
-}
-
-layer {
-	name: "loss"
-	type: "EuclideanLoss"
-	bottom: "joint_pred"
-	bottom: "joint"
-	top: "loss"
-}
-
-layer {
-	name: "ignore"
-	type: "Silence"
-	bottom: "inds"
-	bottom: "com"
+    param {
+        lr_mult: 2
+        decay_mult: 0
+    }
+    inner_product_param {
+        num_output: 42
+        weight_filler {
+            type: "xavier"
+        }
+        bias_filler {
+            type: "constant"
+        }
+        axis: 2
+    }
 }

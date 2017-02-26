@@ -18,4 +18,4 @@ echo Logging to "$LOG_FILE"
 ln -sf  "$LOG_FILE" "$LOG/train.log"
 
 $TOOL/caffe train -solver $MODELS/solver_hand_baseline.prototxt \
-		  -gpu 0
+		  -gpu 1

@@ -18,5 +18,5 @@ echo Logging to "$LOG_FILE"
 ln -sf  "$LOG_FILE" "$LOG/train.log"
 
 $TOOL/caffe train -solver $MODELS/solver_hand_lstm.prototxt \
-		  -weights $CAFFEMODEL/hand_baseline/baseline_iter_200000.caffemodel \
+		  -weights $CAFFEMODEL/hand_baseline/hand_baseline_iter_100000.caffemodel \
 		  -gpu 0

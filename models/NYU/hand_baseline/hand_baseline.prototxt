@@ -8,7 +8,7 @@ layer {
   	top: "com"
   	top: "inds"
   	hdf5_data_param {
-    	source:"dataset/cache/NYU_train.txt"
+    	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_train.txt"
     	batch_size: 512
   	}
   	include {
@@ -24,7 +24,7 @@ layer {
   	top: "com"
   	top: "inds"
   	hdf5_data_param {
-    	source:"dataset/cache/NYU_test.txt"
+    	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_test.txt"
 	    batch_size: 64
   	}
   	include {

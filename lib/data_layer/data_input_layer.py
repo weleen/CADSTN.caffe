@@ -12,7 +12,7 @@ cachePath = '/home/wuyiming/git/Hand/dataset/cache/'
 
 class DataRead(object):
     """Read the data from h5py"""
-    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16):
+    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3):
         """
         :param dataPath:
         :param name:
@@ -22,6 +22,7 @@ class DataRead(object):
         self.cachePath = path
         self.clip_length = clip_length # how many frames each sequence
         self.data = {}
+        self.dim = dim
 
     def loadData(self):
         """
@@ -73,7 +74,7 @@ class DataRead(object):
             self.data['joint'] = np.array(dataFile['joint'])
         elif self.name == 'ICVL' and self.phase == 'test_1':
             # test seq 1, we test ICVL dataset seperately
-            File1 = self.cachePath + self.name + '_' + self.phase + 'seq_1.h5'
+            File1 = self.cachePath + self.name + '_' + self.phase[:-1] + 'seq_1.h5'
             assert os.path.isfile(File1), '{} is not exists!'.format(File1)
 
             dataFile_1 = h5py.File(File1, 'r')
@@ -87,7 +88,7 @@ class DataRead(object):
             self.data['depth'] = np.array(dataFile_1['depth'])
             self.data['joint'] = np.array(dataFile_1['joint'])
         elif self.name == 'ICVL' and self.phase == 'test_2':
-            File2 = self.cachePath + self.name + '_' + self.phase + 'seq_2.h5'
+            File2 = self.cachePath + self.name + '_' + self.phase[:-1] + 'seq_2.h5'
             assert os.path.isfile(File2), '{} is not exists!'.format(File2)
 
             dataFile_2 = h5py.File(File2, 'r')
@@ -198,7 +199,7 @@ class videoRead(caffe.Layer):
         self.buffer_size, self.frames = map(int, layer_params['sequence_num_size'].split())
         self.initialize()
 
-        dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames)
+        dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames, self.dim)
         dataReader.loadData()
         self.seq_dict = dataReader.dataToSeq()
 
@@ -282,6 +283,8 @@ class NYUTrainSeq(videoRead):
         self.idx = 0
         self.path = cachePath
         self.joints = 14
+        self.dim = 3
+        self.imagesize = 128
 
 class NYUTestSeq(videoRead):
     def initalize(self):
@@ -291,6 +294,8 @@ class NYUTestSeq(videoRead):
         self.idx = 0
         self.path = cachePath
         self.joints = 14
+        self.dim = 3
+        self.imagesize = 128
 
 class ICVLTrainSeq(videoRead):
     def initialize(self):
@@ -300,6 +305,8 @@ class ICVLTrainSeq(videoRead):
         self.idx = 0
         self.path = cachePath
         self.joints = 16
+        self.dim = 3
+        self.imagesize = 128
 
 class ICVLTestSeq1(videoRead):
     def initialize(self):
@@ -309,6 +316,8 @@ class ICVLTestSeq1(videoRead):
         self.idx = 0
         self.path = cachePath
         self.joints = 16
+        self.dim = 3
+        self.imagesize = 128
 
 class ICVLTestSeq2(videoRead):
     def initialize(self):
@@ -318,3 +327,5 @@ class ICVLTestSeq2(videoRead):
         self.idx = 0
         self.path = cachePath
         self.joints = 16
+        self.dim = 3
+        self.imagesize = 128
