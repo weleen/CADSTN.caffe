@@ -276,7 +276,7 @@ class videoRead(caffe.Layer):
 
 
 class NYUTrainSeq(videoRead):
-    def initalize(self):
+    def initialize(self):
         self.name = 'NYU'
         self.train_or_test = 'train'
         self.N = self.buffer_size*self.frames
@@ -287,7 +287,7 @@ class NYUTrainSeq(videoRead):
         self.imagesize = 128
 
 class NYUTestSeq(videoRead):
-    def initalize(self):
+    def initialize(self):
         self.name = 'NYU'
         self.train_or_test = 'test'
         self.N = self.buffer_size*self.frames

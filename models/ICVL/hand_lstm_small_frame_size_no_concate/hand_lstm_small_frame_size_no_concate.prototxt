@@ -351,7 +351,7 @@ layer {
         shape {
             dim: 16
             dim: 32
-            dim: 48
+            dim: 42
         }
     }
     include: {
@@ -368,7 +368,7 @@ layer {
         shape {
             dim: 16
             dim: 1
-            dim: 48
+            dim: 42
         }
     }
     include: {
@@ -456,7 +456,7 @@ layer {
         decay_mult: 0
     }
     inner_product_param {
-        num_output: 48
+        num_output: 42
         weight_filler {
             type: "xavier"
         }
@@ -484,7 +484,7 @@ layer {
         decay_mult: 0
     }
     inner_product_param {
-        num_output: 48
+        num_output: 42
         weight_filler {
             type: "xavier"
         }

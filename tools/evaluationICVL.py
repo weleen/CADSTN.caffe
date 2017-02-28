@@ -14,10 +14,36 @@ import time
 import scipy.io as scio
 from data_layer.data_input_layer import *
 from data.transformations import transformPoint2D
-from util.handpose_evaluation import NYUHandposeEvaluation,ICVLHandposeEvaluation
-from data.importers import NYUImporter,ICVLImporter
+from util.handpose_evaluation import ICVLHandposeEvaluation
+from data.importers import ICVLImporter, DepthImporter
 
-DEBUG = False
+DEBUG = True
+
+fx, fy, ux, uy = 241.42, 241.42, 160, 120
+def jointsImgTo3D(sample):
+    """
+    Normalize sample to metric 3D
+    :param sample: joints in (x,y,z) with x,y in image coordinates and z in mm
+    :return: normalized joints in mm
+    """
+    ret = np.zeros((sample.shape[0], 3), np.float32)
+    for i in range(sample.shape[0]):
+        ret[i] = jointImgTo3D(sample[i])
+    return ret
+
+
+def jointImgTo3D(sample):
+    """
+    Normalize sample to metric 3D
+    :param sample: joints in (x,y,z) with x,y in image coordinates and z in mm
+    :return: normalized joints in mm
+    """
+    ret = np.zeros((3,), np.float32)
+    # convert to metric using f
+    ret[0] = (sample[0] - ux) * sample[2] / fx
+    ret[1] = (sample[1] - uy) * sample[2] / fy
+    ret[2] = sample[2]
+    return ret
 
 def loadGt(gt_file):
     """
@@ -26,15 +52,18 @@ def loadGt(gt_file):
     :param gt_file: path to ground truth file
     :return: joint in xyz coordinate
     """
-    #gt_file = '/mnt/data/NYU-Hands-v2/test/joint_data.mat'
-    data = scio.loadmat(gt_file)
-    kinect_index = 0
-    joint_uvd = data['joint_uvd'][kinect_index, :, :, :]
-    joint_xyz = data['joint_xyz'][kinect_index, :, :, :]
-    if 'NYU' in gt_file:
-        restrictedJoint = [0, 3, 6, 9, 12, 15, 18, 21, 24, 25, 27, 30, 31, 32]
-        joint_name = data['joint_names'].reshape(36, 1)
-        return joint_xyz[:, restrictedJoint]
+    #gt_file = '../dataset/ICVL/test_seq_1.txt'
+    gt = []
+    with open(gt_file, 'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            gt.append(map(float, line.split(' ')[1:-1]))
+    gt = np.array(gt)
+    gt3D = []
+    for i in xrange(gt.shape[0]):
+        gt3D.append(jointsImgTo3D(gt[i].reshape(16, 3)))
+    gt3D = np.array(gt3D)
+    return gt3D
 
 def loadPredFile(filepath, estimation_mode='uvd'):
     """
@@ -55,7 +84,7 @@ def loadPredFile(filepath, estimation_mode='uvd'):
         dim = 3
         return joints.reshape(n, d/dim, dim)
 
-def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu='gpu'):
+def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
     """
     predict joints in xyz coordinate
     predictJoints(str, str, bool, str, str) -> (np.array, str)
@@ -86,16 +115,15 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
     dim = 3 # estimate 3 dimension x, y and z
 
     # recognize different dataset
-    if dataset == 'NYU':
-        test_num = 8252
-    elif dataset == 'ICVL':
-        test_num = 0
+    if dataset == 'ICVL':
+        test_num = 720
     else:
         assert 0, 'unknow dataset {}'.format(dataset)
 
     if gpu_or_cpu == 'gpu':
-        caffe.set_mode_gpu()
         caffe.set_device(0)
+        caffe.set_mode_gpu()
+
 
     if DEBUG:
         print 'frame_size = ', frame_size
@@ -113,7 +141,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
             return loadPredFile(file_name), file_name
 
     # calculate the predicted joints in xyz coordinate
-    predicted_joints = np.array([None] * test_num)
+    predicted_joints = np.zeros((test_num, joint_size / dim, dim))
 
     t_start = time.time()
     for i in xrange(np.int(np.ceil(float(test_num) / (frame_size * seq_size)))):
@@ -122,19 +150,14 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
         for j, ind in enumerate(net.blobs['inds'].data):
             row = j / seq_size
             col = j % seq_size
-            if predicted_joints[int(ind) - 1] == None:  # add this sentence make run slow
+            if predicted_joints[int(ind)] == None:  # add this sentence make run slow
                 if model_name == 'baseline':
-                    if ind <= 2440:
-                        predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(14, 3) * \
-                                                          300 / 2 + net.blobs['com'].data[j].reshape(1, 3))
-                    else:
-                        predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(14, 3) * \
-                                                          300 * 0.87 / 2 + net.blobs['com'].data[j].reshape(1, 3))
+                    predicted_joints[int(ind)] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
+                                                     125 + net.blobs['com'].data[j].reshape(1, 3)).copy()
                 else:
-                    predicted_joints[int(ind) - 1] = \
-                        (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
-                        * net.blobs['config'].data[j][0] / 2 \
-                        + net.blobs['com'].data[j].reshape(1, 3)).copy()
+                    predicted_joints[int(ind)] = (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
+                                                  * net.blobs['config'].data[j][0] / 2 \
+                                                  + net.blobs['com'].data[j].reshape(1, 3)).copy()
     t_end = time.time()
     print 'time elapse {}'.format((t_end - t_start) / test_num)
 
@@ -142,7 +165,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
         print 'write the result in {}'.format(file_name)
         with open(file_name, 'w') as f:
             for i in xrange(predicted_joints.shape[0]):
-                for item in predicted_joints[i].reshape(14 * 3):
+                for item in predicted_joints[i].reshape(joint_size):
                     f.write("%s " % item)
                 f.write("\n")
         predicted_joints = loadPredFile(file_name)
@@ -161,28 +184,29 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
 if __name__ == '__main__':
 
     # test NYU dataset
-    gt_file = '../dataset/NYU/test/joint_data.mat'
+    gt_file = '../dataset/ICVL/test_seq_1.txt'
     gt3D = loadGt(gt_file)
 
     if DEBUG:
         print 'gt3D.shape = ', gt3D.shape
 
     # predict joint by ourselves in xyz coordinate
-    model = 'lstm_no_concate'
-    weight_num = '190000'
+    model = 'baseline'
+    weight_num = '150000'
     joints, file_name = predictJoints(model, weight_num)
 
-    eval_prefix = 'NYU_' + model + '_' + weight_num
+    eval_prefix = 'ICVL_' + model + '_' + weight_num
     if not os.path.exists('../eval/'+eval_prefix+'/'):
         os.makedirs('../eval/'+eval_prefix+'/')
 
     if DEBUG:
+        print 'gt3D.shape = ', gt3D.shape
         print 'joints.shape = ', joints.shape
         print 'joints[0] = ', joints[0]
         print 'type(joints[0]) = ', type(joints[0])
         print 'type(joints[0][0] = ', type(joints[0][0])
 
-    hpe = NYUHandposeEvaluation(gt3D, joints)
+    hpe = ICVLHandposeEvaluation(gt3D, joints)
     hpe.subfolder += eval_prefix+'/'
     mean_error = hpe.getMeanError()
     max_error = hpe.getMaxError()
@@ -193,20 +217,21 @@ if __name__ == '__main__':
     print("{}".format([hpe.getJointMeanError(j) for j in range(joints[0].shape[0])]))
     print("{}".format([hpe.getJointMaxError(j) for j in range(joints[0].shape[0])]))
 
+    print "Testing baseline"
     #################################
     # BASELINE
     # Load the evaluation
-    di = NYUImporter('../dataset/NYU/', cacheDir='../dataset/cache/')
-    data_baseline = di.loadBaseline('../dataset/NYU/test/test_predictions.mat', np.asarray(gt3D))
+    di = ICVLImporter('../dataset/ICVL/', cacheDir='../dataset/cache/')
+    data_baseline = di.loadBaseline('../dataset/ICVL/Results/LRF_Results_seq_1.txt')
 
-    hpe_base = NYUHandposeEvaluation(gt3D, data_baseline)
+    hpe_base = ICVLHandposeEvaluation(gt3D, data_baseline)
     hpe_base.subfolder += eval_prefix+'/'
     print("Mean error: {}mm".format(hpe_base.getMeanError()))
 
-    hpe.plotEvaluation(eval_prefix, methodName='Our lstm',baseline=[('Tompson et al.',hpe_base)])
+    hpe.plotEvaluation(eval_prefix, methodName='Our lstm', baseline=[('Tang et al.', hpe_base)])
 
-    Seq2_1 = di.loadSequence('test_1')
-    Seq2_2 = di.loadSequence('test_2')
+    Seq2_1 = di.loadSequence('test_seq_1')
+    Seq2_2 = di.loadSequence('test_seq_2')
     testSeqs = [Seq2_1, Seq2_2]
     ind = 0
     for i in testSeqs[0].data:

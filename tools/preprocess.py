@@ -132,7 +132,7 @@ class convertICVLDatasetToh5(convertDatasetToh5):
             gt3Dorig.append(data.gt3Dorig)
             gt3Dcrop.append(data.gt3Dcrop)
             com.append(data.com)
-            fileName.append(int(data.fileName[(data.fileName.find('image_') + 6) : (data.fileName.find('.png') - 1)]))
+            fileName.append(int(data.fileName[(data.fileName.find('image_') + 6) : (data.fileName.find('.png'))]))
 
         dataset = h5py.File(name, 'w')
 

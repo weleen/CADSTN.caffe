@@ -417,7 +417,7 @@ layer {
     bottom: "reshape-cm"
     top: "lstm"
     recurrent_param {
-        num_output: 256
+        num_output: 1024
         weight_filler {
             type: "uniform"
             min: -0.01
@@ -448,11 +448,11 @@ layer {
     bottom: "lstm"
     top: "pred_joint"
     param {
-        lr_mult: 10
+        lr_mult: 1
         decay_mult: 1
     }
     param {
-        lr_mult: 20
+        lr_mult: 2
         decay_mult: 0
     }
     inner_product_param {

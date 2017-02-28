@@ -19,4 +19,4 @@ ln -sf  "$LOG_FILE" "$LOG/train.log"
 
 $TOOL/caffe train -solver $MODELS/solver_hand_lstm_no_concate.prototxt \
 		  -weights $CAFFEMODEL/hand_baseline/hand_baseline_iter_150000.caffemodel \
-		  -gpu 0
+		  -gpu 1
