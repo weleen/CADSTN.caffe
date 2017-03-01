@@ -26,7 +26,7 @@ class convertNYUDatasetToh5(convertDatasetToh5):
         """create NYU Sequence, train and test sequence"""
         print("create NYU dataset")
 
-        di = NYUImporter('./dataset/' + self.datasetName, cacheDir=self.cacheDir)
+        di = NYUImporter('../dataset/' + self.datasetName, cacheDir=self.cacheDir)
 
         Seq1 = di.loadSequence('train') # train sequence
         Seq2_1 = di.loadSequence('test_1') # test sequence 1
@@ -90,7 +90,7 @@ class convertICVLDatasetToh5(convertDatasetToh5):
         """create ICVL Sequence, train and test sequence"""
         print("create ICVL dataset")
 
-        di = ICVLImporter('./dataset/' + self.datasetName, cacheDir=self.cacheDir)
+        di = ICVLImporter('../dataset/' + self.datasetName, cacheDir=self.cacheDir)
         Seq1 = di.loadSequence('train', ['0']) # use only the original dataset
         Seq2_1 = di.loadSequence('test_seq_1')
         Seq2_2 = di.loadSequence('test_seq_2')
@@ -146,7 +146,7 @@ class convertICVLDatasetToh5(convertDatasetToh5):
 
 if __name__ == '__main__':
 
-    cacheDir = './dataset/cache'
+    cacheDir = '../dataset/cache'
 
     NYUCreator = convertNYUDatasetToh5(cacheDir, 'NYU')
     NYUCreator.createSequence()
