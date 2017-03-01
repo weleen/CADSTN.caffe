@@ -1,4 +1,4 @@
-test_iter: 2750
+test_iter: 234
 test_interval: 1000
 net: "models/ICVL/hand_lstm_small_frame_size_no_concate/hand_lstm_small_frame_size_no_concate.prototxt"
 base_lr: 1e-4

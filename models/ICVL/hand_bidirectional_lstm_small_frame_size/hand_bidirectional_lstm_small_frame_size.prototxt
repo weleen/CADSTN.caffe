@@ -1,4 +1,4 @@
-name: "hand-lstm-no-concate"
+name: "hand-bidirectional-lstm"
 
 layer {
     name: "data"
@@ -411,11 +411,11 @@ layer {
 }
 
 layer {
-    name: "lstm"
+    name: "lstm1"
     type: "LSTM"
     bottom: "reshape-data"
     bottom: "reshape-cm"
-    top: "lstm"
+    top: "lstm1"
     recurrent_param {
         num_output: 1024
         weight_filler {
@@ -432,27 +432,96 @@ layer {
 }
 
 layer {
-    name: "lstm-drop"
+    name: "lstm1-drop"
     type: "Dropout"
-    bottom: "lstm"
-    top: "lstm"
+    bottom: "lstm1"
+    top: "lstm1"
     dropout_param {
         dropout_ratio: 0.5
     }
 }
 
+layer {
+	name: "slice_data"
+    type: "Slice"
+    bottom: "reshape-data"
+    top: "data0"
+    top: "data1"
+    top: "data2"
+    slice_param {
+    	axis: 0
+        slice_point: 1
+        slice_point: 2
+    }
+}
+
+layer {
+	name: "flip-data"
+    type: "Concat"
+    bottom: "data2"
+    bottom: "data1"
+    bottom: "data0"
+    top: "flip-data"
+    concat_param {
+    	axis: 0
+    }
+}
+
+
+layer {
+    name: "lstm2"
+    type: "LSTM"
+    bottom: "flip-data"
+    bottom: "reshape-cm"
+    top: "lstm2"
+    recurrent_param {
+        num_output: 1024
+        weight_filler {
+            type: "uniform"
+            min: -0.01
+            max: 0.01
+        }
+        bias_filler {
+            type: "constant"
+            value: 0
+        }
+        #debug_info: true
+    }
+}
+
+layer {
+    name: "lstm2-drop"
+    type: "Dropout"
+    bottom: "lstm2"
+    top: "lstm2"
+    dropout_param {
+        dropout_ratio: 0.5
+    }
+}
+
+layer {
+    name: "concat-feature"
+    type: "Concat"
+    bottom: "lstm1"
+    bottom: "lstm2"
+    bottom: "reshape-data"
+    top: "concat-feature"
+    concat_param {
+        axis: 2
+    }
+}
 
 layer {
     name: "pred_joint"
     type: "InnerProduct"
-    bottom: "lstm"
+    bottom: "concat-feature"
     top: "pred_joint"
     param {
-        lr_mult: 10
+        lr_mult: 1
         decay_mult: 1
     }
     param {
-        lr_mult: 20
+        lr_mult: 2
         decay_mult: 0
     }
     inner_product_param {
@@ -473,14 +542,14 @@ layer {
 layer {
     name: "pred_joint"
     type: "InnerProduct"
-    bottom: "lstm"
+    bottom: "concat-feature"
     top: "pred_joint"
     param {
-        lr_mult: 10
+        lr_mult: 1
         decay_mult: 1
     }
     param {
-        lr_mult: 20
+        lr_mult: 2
         decay_mult: 0
     }
     inner_product_param {

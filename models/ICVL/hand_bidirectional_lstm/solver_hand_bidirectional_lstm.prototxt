@@ -1,6 +1,6 @@
 test_iter: 44
 test_interval: 1000
-net: "models/ICVL/hand_lstm_no_concate/hand_lstm_no_concate.prototxt"
+net: "models/ICVL/hand_bidirectional_lstm/hand_bidirectional_lstm.prototxt"
 base_lr: 1e-4
 momentum: 0.9
 lr_policy: "step"
@@ -11,6 +11,5 @@ display: 500
 max_iter: 200000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "weights/ICVL/hand_lstm_no_concate/hand_lstm_no_concate"
-type: "SGD"
+snapshot_prefix: "weights/ICVL/hand_bidirectional_lstm/hand_bidirectional_lstm"
 solver_mode: GPU

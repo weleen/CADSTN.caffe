@@ -1,4 +1,4 @@
-test_iter: 516
+test_iter: 44
 test_interval: 1000
 net: "models/ICVL/hand_lstm/hand_lstm.prototxt"
 base_lr: 1e-4

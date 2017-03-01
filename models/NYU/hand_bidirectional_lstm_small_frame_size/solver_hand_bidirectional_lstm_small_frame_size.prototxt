@@ -1,4 +1,4 @@
-test_iter: 516
+test_iter: 2750
 test_interval: 1000
 net: "models/NYU/hand_bidirectional_lstm_small_frame_size/hand_bidirectional_lstm_small_frame_size.prototxt"
 base_lr: 1e-4
