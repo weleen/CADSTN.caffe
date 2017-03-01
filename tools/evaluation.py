@@ -168,8 +168,8 @@ if __name__ == '__main__':
         print 'gt3D.shape = ', gt3D.shape
 
     # predict joint by ourselves in xyz coordinate
-    model = 'lstm_no_concate'
-    weight_num = '190000'
+    model = 'lstm_small_frame_size_no_concate'
+    weight_num = '200000'
     joints, file_name = predictJoints(model, weight_num)
 
     eval_prefix = 'NYU_' + model + '_' + weight_num

@@ -17,7 +17,7 @@ from data.transformations import transformPoint2D
 from util.handpose_evaluation import ICVLHandposeEvaluation
 from data.importers import ICVLImporter, DepthImporter
 
-DEBUG = True
+DEBUG = False
 
 fx, fy, ux, uy = 241.42, 241.42, 160, 120
 def jointsImgTo3D(sample):
@@ -116,7 +116,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cp
 
     # recognize different dataset
     if dataset == 'ICVL':
-        test_num = 720
+        test_num = 702
     else:
         assert 0, 'unknow dataset {}'.format(dataset)
 
@@ -150,14 +150,13 @@ def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cp
         for j, ind in enumerate(net.blobs['inds'].data):
             row = j / seq_size
             col = j % seq_size
-            if predicted_joints[int(ind)] == None:  # add this sentence make run slow
-                if model_name == 'baseline':
-                    predicted_joints[int(ind)] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
-                                                     125 + net.blobs['com'].data[j].reshape(1, 3)).copy()
-                else:
-                    predicted_joints[int(ind)] = (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
-                                                  * net.blobs['config'].data[j][0] / 2 \
-                                                  + net.blobs['com'].data[j].reshape(1, 3)).copy()
+            if model_name == 'baseline':
+                predicted_joints[int(ind)] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
+                                              125 + net.blobs['com'].data[j].reshape(1, 3)).copy()
+            else:
+                predicted_joints[int(ind)] = (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
+                                              * net.blobs['config'].data[j][0] / 2 \
+                                              + net.blobs['com'].data[j].reshape(1, 3)).copy()
     t_end = time.time()
     print 'time elapse {}'.format((t_end - t_start) / test_num)
 
