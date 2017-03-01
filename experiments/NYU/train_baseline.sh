@@ -11,7 +11,7 @@ MODELS=$ROOT/models/NYU/hand_baseline
 
 export PYTHONPATH=$ROOT/caffe/python:$ROOT/lib/data/:$ROOT/lib/data_layer:$ROOT/lib/util:$PYTHONPATH
 
-LOG_FILE="$LOG/train_log_baseline_`date`.txt"
+LOG_FILE="$LOG/baseline_`date`.txt"
 exec &> >(tee -a "$LOG_FILE")
 echo Logging to "$LOG_FILE"
 

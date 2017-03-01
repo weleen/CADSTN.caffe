@@ -174,7 +174,11 @@ if __name__ == '__main__':
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
     model.append('baseline')
+    model.append('lstm_small_frame_size_no_concate')
+    model.append('lstm_small_frame_size')
     weight_num.append('150000')
+    weight_num.append('200000')
+    weight_num.append('200000')
     assert len(model) == len(weight_num), 'length is not equal!'
 
     for ind in xrange(len(model)):
@@ -213,23 +217,23 @@ if __name__ == '__main__':
 
     plot_list = zip(model, hpe)
     hpe_base.plotEvaluation(eval_prefix[0], methodName='Tompson et al.', baseline=plot_list)
-    #print type(zip(model, hpe))
-    #hpe[0].plotEvaluation(eval_prefix[0], methodName='baseline',baseline=[('Tompson et al.',hpe_base)].extend(zip(model, hpe)))
 
-    # Seq2_1 = di.loadSequence('test_1')
-    # Seq2_2 = di.loadSequence('test_2')
-    # testSeqs = [Seq2_1, Seq2_2]
-    # ind = 0
-    # for i in testSeqs[0].data:
-    #     if ind % 20 != 0:
-    #         ind += 1
-    #         continue
-    #     jt = joints[ind]
-    #     jtI = di.joints3DToImg(jt)
-    #     for joint in range(jt.shape[0]):
-    #         t=transformPoint2D(jtI[joint], i.T)
-    #         jtI[joint, 0] = t[0]
-    #         jtI[joint, 1] = t[1]
-    #     hpe.plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix, ind))
-    #     ind+=1
-    #
+    Seq2_1 = di.loadSequence('test_1')
+    Seq2_2 = di.loadSequence('test_2')
+    testSeqs = [Seq2_1, Seq2_2]
+
+    for index in xrange(len(hpe)):
+        ind = 0
+        for i in testSeqs[0].data:
+            if ind % 200 != 0:
+                ind += 1
+                continue
+            jt = pred_joints[index][ind]
+            jtI = di.joints3DToImg(jt)
+            for joint in range(jt.shape[0]):
+                t=transformPoint2D(jtI[joint], i.T)
+                jtI[joint, 0] = t[0]
+                jtI[joint, 1] = t[1]
+            hpe[index].plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix[index], ind))
+            ind+=1
+

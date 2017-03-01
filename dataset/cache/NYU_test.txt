@@ -1,2 +1,0 @@
-/home/wuyiming/git/Hand/dataset/cache/NYU_test_1.h5
-/home/wuyiming/git/Hand/dataset/cache/NYU_test_2.h5

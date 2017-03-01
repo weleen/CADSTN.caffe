@@ -189,32 +189,44 @@ if __name__ == '__main__':
     if DEBUG:
         print 'gt3D.shape = ', gt3D.shape
 
+    model = []
+    weight_num = []
+    pred_joints = []
+    hpe = []
+    eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model = 'baseline'
-    weight_num = '150000'
-    joints, file_name = predictJoints(model, weight_num)
+    model.append('baseline')
+    #model.append('lstm_small_frame_size_no_concate')
+    model.append('lstm_small_frame_size')
+    weight_num.append('150000')
+    #weight_num.append('200000')
+    weight_num.append('200000')
+    assert len(model) == len(weight_num), 'length is not equal!'
+    assert len(model) == len(weight_num), 'length is not equal!'
 
-    eval_prefix = 'ICVL_' + model + '_' + weight_num
-    if not os.path.exists('../eval/'+eval_prefix+'/'):
-        os.makedirs('../eval/'+eval_prefix+'/')
+    for ind in xrange(len(model)):
+        joints, file_name = predictJoints(model[ind], weight_num[ind])
+        pred_joints.append(joints)
+        eval_prefix.append('ICVL_' + model[ind] + '_' + weight_num[ind])
+        if not os.path.exists('../eval/'+eval_prefix[ind]+'/'):
+            os.makedirs('../eval/'+eval_prefix[ind]+'/')
 
-    if DEBUG:
-        print 'gt3D.shape = ', gt3D.shape
-        print 'joints.shape = ', joints.shape
-        print 'joints[0] = ', joints[0]
-        print 'type(joints[0]) = ', type(joints[0])
-        print 'type(joints[0][0] = ', type(joints[0][0])
+        if DEBUG:
+            print 'joints.shape = ', joints.shape
+            print 'joints[0] = ', joints[0]
+            print 'type(joints[0]) = ', type(joints[0])
+            print 'type(joints[0][0] = ', type(joints[0][0])
 
-    hpe = ICVLHandposeEvaluation(gt3D, joints)
-    hpe.subfolder += eval_prefix+'/'
-    mean_error = hpe.getMeanError()
-    max_error = hpe.getMaxError()
-    #print("Train samples: {}, test samples: {}".format(train_data.shape[0], len(gt3D)))
-    print("Mean error: {}mm, max error: {}mm".format(mean_error, max_error))
-    print("MD score: {}".format(hpe.getMDscore(80)))
+        hpe.append(ICVLHandposeEvaluation(gt3D, joints))
+        hpe[ind].subfolder += eval_prefix[ind]+'/'
+        mean_error = hpe[ind].getMeanError()
+        max_error = hpe[ind].getMaxError()
+        print("Test on {}_{}".format(model[ind], weight_num[ind]))
+        print("Mean error: {}mm, max error: {}mm".format(mean_error, max_error))
+        print("MD score: {}".format(hpe[ind].getMDscore(80)))
 
-    print("{}".format([hpe.getJointMeanError(j) for j in range(joints[0].shape[0])]))
-    print("{}".format([hpe.getJointMaxError(j) for j in range(joints[0].shape[0])]))
+        print("{}".format([hpe[ind].getJointMeanError(j) for j in range(joints[0].shape[0])]))
+        print("{}".format([hpe[ind].getJointMaxError(j) for j in range(joints[0].shape[0])]))
 
     print "Testing baseline"
     #################################
@@ -224,24 +236,27 @@ if __name__ == '__main__':
     data_baseline = di.loadBaseline('../dataset/ICVL/Results/LRF_Results_seq_1.txt')
 
     hpe_base = ICVLHandposeEvaluation(gt3D, data_baseline)
-    hpe_base.subfolder += eval_prefix+'/'
+    hpe_base.subfolder += eval_prefix[0]+'/'
     print("Mean error: {}mm".format(hpe_base.getMeanError()))
 
-    hpe.plotEvaluation(eval_prefix, methodName='Our lstm', baseline=[('Tang et al.', hpe_base)])
+    plot_list = zip(model, hpe)
+    hpe_base.plotEvaluation(eval_prefix[0], methodName='Tang et al.', baseline=plot_list)
 
     Seq2_1 = di.loadSequence('test_seq_1')
     Seq2_2 = di.loadSequence('test_seq_2')
     testSeqs = [Seq2_1, Seq2_2]
-    ind = 0
-    for i in testSeqs[0].data:
-        if ind % 20 != 0:
-            ind += 1
-            continue
-        jt = joints[ind]
-        jtI = di.joints3DToImg(jt)
-        for joint in range(jt.shape[0]):
-            t=transformPoint2D(jtI[joint], i.T)
-            jtI[joint, 0] = t[0]
-            jtI[joint, 1] = t[1]
-        hpe.plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix, ind))
-        ind+=1
+
+    for index in xrange(len(hpe)):
+        ind = 0
+        for i in testSeqs[0].data:
+            if ind % 20 != 0:
+                ind += 1
+                continue
+            jt = pred_joints[index][ind]
+            jtI = di.joints3DToImg(jt)
+            for joint in range(jt.shape[0]):
+                t=transformPoint2D(jtI[joint], i.T)
+                jtI[joint, 0] = t[0]
+                jtI[joint, 1] = t[1]
+            hpe[index].plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix[index], ind))
+            ind+=1
