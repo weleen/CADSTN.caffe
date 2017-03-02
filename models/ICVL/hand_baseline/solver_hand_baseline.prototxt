@@ -1,7 +1,7 @@
 test_iter: 11
 test_interval: 1000
 net: "models/ICVL/hand_baseline/hand_baseline.prototxt"
-base_lr: 5e-3
+base_lr: 1e-4
 momentum: 0.9
 lr_policy: "step"
 stepsize: 50000

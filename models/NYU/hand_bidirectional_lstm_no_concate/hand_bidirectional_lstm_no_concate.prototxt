@@ -1,0 +1,623 @@
+name: "hand-bidirectional-lstm-no-concate"
+
+layer {
+    name: "data"
+    type: "Python"
+    top: "depth"
+    top: "joint"
+    top: "clip_markers"
+    top: "com"
+    top: "config"
+    top: "inds"
+    python_param {
+        module: "data_input_layer"
+        layer: "NYUTrainSeq"
+        param_str: "'sequence_num_size': '32 16'"
+    }
+    include: {
+        phase: TRAIN
+    }
+}
+
+layer {
+    name: "data"
+    type: "Python"
+    top: "depth"
+    top: "joint"
+    top: "clip_markers"
+    top: "com"
+    top: "config"
+    top: "inds"
+    python_param {
+        module: "data_input_layer"
+        layer: "NYUTestSeq"
+        param_str: "'sequence_num_size': '1 16'"
+    }
+    include: {
+        phase: TEST
+        #stage: "test-on-test"
+    }
+}
+
+# conv1
+
+layer {
+	name: "conv1_1"
+	type: "Convolution"
+	bottom: "depth"
+	top: "conv1_1"
+	convolution_param {
+		num_output: 16
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "relu_conv1_1"
+	type: "ReLU"
+	bottom: "conv1_1"
+	top: "conv1_1"
+}
+
+layer {
+	name: "conv1_2"
+	type: "Convolution"
+	bottom: "conv1_1"
+	top: "conv1_2"
+	convolution_param {
+		num_output: 16
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "relu_conv1_2"
+	type: "ReLU"
+	bottom: "conv1_2"
+	top: "conv1_2"
+}
+
+layer {
+	name: "pool1"
+	type: "Pooling"
+	bottom: "conv1_2"
+	top: "pool1"
+	pooling_param {
+		pool: MAX
+		kernel_size: 3
+		stride: 2
+	}
+}
+
+# conv2
+
+layer {
+	name: "res2_branch1"
+	type: "Convolution"
+	bottom: "pool1"
+	top: "res2_branch1"
+	convolution_param {
+		num_output: 32
+		kernel_size: 1
+		pad: 0
+		stride: 1
+		bias_term: false
+		weight_filler {
+			type: "xavier"
+		}
+	}
+}
+
+layer {
+	name: "res2_branch2a"
+	type: "Convolution"
+	bottom: "pool1"
+	top: "res2_branch2a"
+	convolution_param {
+		num_output: 32
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "relu_res2_branch2a"
+	type: "ReLU"
+	bottom: "res2_branch2a"
+	top: "res2_branch2a"
+}
+
+layer {
+	name: "res2_branch2b"
+	type: "Convolution"
+	bottom: "res2_branch2a"
+	top: "res2_branch2b"
+	convolution_param {
+		num_output: 32
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "res2"
+	type: "Eltwise"
+	bottom: "res2_branch1"
+	bottom: "res2_branch2b"
+	top: "res2"
+}
+
+layer {
+	name: "relu_res2"
+	type: "ReLU"
+	bottom: "res2"
+	top: "res2"
+}
+
+layer {
+	name: "pool2"
+	type: "Pooling"
+	bottom: "res2"
+	top: "pool2"
+	pooling_param {
+		pool: MAX
+		stride: 3
+		kernel_size: 2
+	}
+}
+
+# conv3
+
+layer {
+	name: "res3_branch1"
+	type: "Convolution"
+	bottom: "pool2"
+	top: "res3_branch1"
+	convolution_param {
+		num_output: 64
+		kernel_size: 1
+		pad: 0
+		stride: 1
+		bias_term: false
+		weight_filler {
+			type: "xavier"
+		}
+	}
+}
+
+layer {
+	name: "res3_branch2a"
+	type: "Convolution"
+	bottom: "pool2"
+	top: "res3_branch2a"
+	convolution_param {
+		num_output: 64
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "relu_res3_branch2a"
+	type: "ReLU"
+	bottom: "res3_branch2a"
+	top: "res3_branch2a"
+}
+
+layer {
+	name: "res3_branch2b"
+	type: "Convolution"
+	bottom: "res3_branch2a"
+	top: "res3_branch2b"
+	convolution_param {
+		num_output: 64
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "res3"
+	type: "Eltwise"
+	bottom: "res3_branch1"
+	bottom: "res3_branch2b"
+	top: "res3"
+}
+
+layer {
+	name: "relu_res3"
+	type: "ReLU"
+	bottom: "res3"
+	top: "res3"
+}
+
+layer {
+	name: "pool3"
+	type: "Pooling"
+	bottom: "res3"
+	top: "pool3"
+	pooling_param {
+		pool: MAX
+		stride: 2
+		kernel_size: 3
+	}
+}
+
+layer {
+	name: "fc1"
+	type: "InnerProduct"
+	bottom: "pool3"
+	top: "fc1"
+	inner_product_param {
+		num_output: 2048
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "drop1"
+    type: "Dropout"
+    bottom: "fc1"
+    top: "fc1"
+    dropout_param {
+    	dropout_ratio: 0.5
+    }
+}
+
+layer {
+    name: "reshape-data"
+    type: "Reshape"
+    bottom: "fc1"
+    top: "reshape-data"
+    reshape_param {
+        shape {
+            dim: 16
+            dim: 32
+            dim: 2048
+        }
+    }
+    include: {
+        phase: TRAIN
+    }
+}
+
+layer {
+    name: "reshape-data"
+    type: "Reshape"
+    bottom: "fc1"
+    top: "reshape-data"
+    reshape_param {
+        shape {
+            dim: 16
+            dim: 1
+            dim: 2048
+        }
+    }
+    include: {
+        phase: TEST
+        #stage: "test-on-test"
+    }
+}
+
+layer {
+    name: "reshape-joint"
+    type: "Reshape"
+    bottom: "joint"
+    top: "reshape-joint"
+    reshape_param {
+        shape {
+            dim: 16
+            dim: 32
+            dim: 42
+        }
+    }
+    include: {
+        phase: TRAIN
+    }
+}
+
+layer {
+    name: "reshape-joint"
+    type: "Reshape"
+    bottom: "joint"
+    top: "reshape-joint"
+    reshape_param {
+        shape {
+            dim: 16
+            dim: 1
+            dim: 42
+        }
+    }
+    include: {
+        phase: TEST
+        #stage: "test-on-test"
+    }
+}
+
+layer {
+    name: "reshape-cm"
+    type: "Reshape"
+    bottom: "clip_markers"
+    top: "reshape-cm"
+    reshape_param {
+        shape {
+            dim: 16
+            dim: 32
+        }
+    }
+    include: {
+        phase: TRAIN
+    }
+}
+
+layer {
+    name: "reshape-cm"
+    type: "Reshape"
+    bottom: "clip_markers"
+    top: "reshape-cm"
+    reshape_param {
+        shape {
+            dim: 16
+            dim: 1
+        }
+    }
+    include: {
+        phase: TEST
+        #stage: "test-on-test"
+    }
+}
+
+layer {
+    name: "lstm1"
+    type: "LSTM"
+    bottom: "reshape-data"
+    bottom: "reshape-cm"
+    top: "lstm1"
+    recurrent_param {
+        num_output: 1024
+        weight_filler {
+            type: "uniform"
+            min: -0.01
+            max: 0.01
+        }
+        bias_filler {
+            type: "constant"
+            value: 0
+        }
+        #debug_info: true
+    }
+}
+
+layer {
+    name: "lstm1-drop"
+    type: "Dropout"
+    bottom: "lstm1"
+    top: "lstm1"
+    dropout_param {
+        dropout_ratio: 0.5
+    }
+}
+
+layer {
+	name: "slice_data"
+    type: "Slice"
+    bottom: "reshape-data"
+    top: "data0"
+    top: "data1"
+    top: "data2"
+    top: "data3"
+    top: "data4"
+    top: "data5"
+    top: "data6"
+    top: "data7"
+    top: "data8"
+    top: "data9"
+    top: "data10"
+    top: "data11"
+    top: "data12"
+    top: "data13"
+    top: "data14"
+    top: "data15"
+    slice_param {
+    	axis: 0
+        slice_point: 1
+        slice_point: 2
+        slice_point: 3
+        slice_point: 4
+        slice_point: 5
+        slice_point: 6
+        slice_point: 7
+        slice_point: 8
+        slice_point: 9
+        slice_point: 10
+        slice_point: 11
+        slice_point: 12
+        slice_point: 13
+        slice_point: 14
+        slice_point: 15
+    }
+}
+
+layer {
+	name: "flip-data"
+    type: "Concat"
+    bottom: "data15"
+    bottom: "data14"
+    bottom: "data13"
+    bottom: "data12"
+    bottom: "data11"
+    bottom: "data10"
+    bottom: "data9"
+    bottom: "data8"
+    bottom: "data7"
+    bottom: "data6"
+    bottom: "data5"
+    bottom: "data4"
+    bottom: "data3"
+    bottom: "data2"
+    bottom: "data1"
+    bottom: "data0"
+    top: "flip-data"
+    concat_param {
+    	axis: 0
+    }
+}
+
+
+layer {
+    name: "lstm2"
+    type: "LSTM"
+    bottom: "flip-data"
+    bottom: "reshape-cm"
+    top: "lstm2"
+    recurrent_param {
+        num_output: 1024
+        weight_filler {
+            type: "uniform"
+            min: -0.01
+            max: 0.01
+        }
+        bias_filler {
+            type: "constant"
+            value: 0
+        }
+        #debug_info: true
+    }
+}
+
+layer {
+    name: "lstm2-drop"
+    type: "Dropout"
+    bottom: "lstm2"
+    top: "lstm2"
+    dropout_param {
+        dropout_ratio: 0.5
+    }
+}
+
+layer {
+    name: "concat-feature"
+    type: "Concat"
+    bottom: "lstm1"
+    bottom: "lstm2"
+    top: "concat-feature"
+    concat_param {
+        axis: 2
+    }
+}
+
+layer {
+    name: "pred_joint"
+    type: "InnerProduct"
+    bottom: "concat-feature"
+    top: "pred_joint"
+    param {
+        lr_mult: 1
+        decay_mult: 1
+    }
+    param {
+        lr_mult: 2
+        decay_mult: 0
+    }
+    inner_product_param {
+        num_output: 42
+        weight_filler {
+            type: "xavier"
+        }
+        bias_filler {
+            type: "constant"
+        }
+        axis: 2
+    }
+    include: {
+        phase: TRAIN
+    }
+}
+
+layer {
+    name: "pred_joint"
+    type: "InnerProduct"
+    bottom: "concat-feature"
+    top: "pred_joint"
+    param {
+        lr_mult: 1
+        decay_mult: 1
+    }
+    param {
+        lr_mult: 2
+        decay_mult: 0
+    }
+    inner_product_param {
+        num_output: 42
+        weight_filler {
+            type: "xavier"
+        }
+        bias_filler {
+            type: "constant"
+        }
+        axis: 2
+    }
+    include: {
+        phase: TEST
+        #stage: "test-on-test"
+    }
+}
+
+layer {
+    name: "loss"
+    type: "EuclideanLoss"
+    bottom: "pred_joint"
+    bottom: "reshape-joint"
+    top: "loss"
+}
+
+layer {
+	name: "ignore"
+    type: "Silence"
+    bottom: "com"
+    bottom: "config"
+    bottom: "inds"
+}

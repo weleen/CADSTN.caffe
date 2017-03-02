@@ -3,3 +3,4 @@
 .ipynb_checkpoints/*
 dataset/cache/*.h5
 dataset/cache/*.pkl
+log/*

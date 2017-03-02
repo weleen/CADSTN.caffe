@@ -14,11 +14,13 @@ import time
 import scipy.io as scio
 from data_layer.data_input_layer import *
 from data.transformations import transformPoint2D
-from util.handpose_evaluation import NYUHandposeEvaluation,ICVLHandposeEvaluation
-from data.importers import NYUImporter,ICVLImporter
+from util.handpose_evaluation import NYUHandposeEvaluation
+from data.importers import NYUImporter
+from data.dataset import NYUDataset
 
 DEBUG = False
 
+# @deprected
 def loadGt(gt_file):
     """
     load ground truth joint
@@ -55,7 +57,7 @@ def loadPredFile(filepath, estimation_mode='uvd'):
         dim = 3
         return joints.reshape(n, d/dim, dim)
 
-def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu='gpu'):
+def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
     """
     predict joints in xyz coordinate
     predictJoints(str, str, bool, str, str) -> (np.array, str)
@@ -66,10 +68,12 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
     :return: predicted_joints: predicted joints
              file_name: file name store the joints
     """
+    model_name = model[0]
+    weights_num = model[1]
     model_def = '../models/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '.prototxt'
     model_weights = '../weights/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '_iter_' + weights_num + '.caffemodel'
 
-    assert os.path.isfile(model_def), '{} is not a file!'.foramt(model_def)
+    assert os.path.isfile(model_def), '{} is not a file!'.format(model_def)
     assert os.path.isfile(model_weights), '{} is not a file!'.format(model_weights)
 
     print 'load prototxt from {}'.format(model_def)
@@ -88,8 +92,6 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
     # recognize different dataset
     if dataset == 'NYU':
         test_num = 8252
-    elif dataset == 'ICVL':
-        test_num = 0
     else:
         assert 0, 'unknow dataset {}'.format(dataset)
 
@@ -113,7 +115,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
             return loadPredFile(file_name), file_name
 
     # calculate the predicted joints in xyz coordinate
-    predicted_joints = np.array([None] * test_num)
+    predicted_joints = np.zeros((test_num, joint_size / dim, dim))
 
     t_start = time.time()
     for i in xrange(np.int(np.ceil(float(test_num) / (frame_size * seq_size)))):
@@ -122,19 +124,18 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
         for j, ind in enumerate(net.blobs['inds'].data):
             row = j / seq_size
             col = j % seq_size
-            if predicted_joints[int(ind) - 1] == None:  # add this sentence make run slow
-                if model_name == 'baseline':
-                    if ind <= 2440:
-                        predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(14, 3) * \
-                                                          300 / 2 + net.blobs['com'].data[j].reshape(1, 3))
-                    else:
-                        predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(14, 3) * \
-                                                          300 * 0.87 / 2 + net.blobs['com'].data[j].reshape(1, 3))
+            if model_name == 'baseline':
+                if ind <= 2440:
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
+                                                      300 / 2 + net.blobs['com'].data[j].reshape(1, dim))
                 else:
-                    predicted_joints[int(ind) - 1] = \
-                        (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
-                        * net.blobs['config'].data[j][0] / 2 \
-                        + net.blobs['com'].data[j].reshape(1, 3)).copy()
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
+                                                      300 * 0.87 / 2 + net.blobs['com'].data[j].reshape(1, dim))
+            else:
+                predicted_joints[int(ind) - 1] = \
+                    (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
+                    * net.blobs['config'].data[j][0] / 2 \
+                    + net.blobs['com'].data[j].reshape(1, dim)).copy()
     t_end = time.time()
     print 'time elapse {}'.format((t_end - t_start) / test_num)
 
@@ -142,7 +143,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
         print 'write the result in {}'.format(file_name)
         with open(file_name, 'w') as f:
             for i in xrange(predicted_joints.shape[0]):
-                for item in predicted_joints[i].reshape(14 * 3):
+                for item in predicted_joints[i].reshape(joint_size):
                     f.write("%s " % item)
                 f.write("\n")
         predicted_joints = loadPredFile(file_name)
@@ -161,8 +162,15 @@ def predictJoints(model_name, weights_num, store=True, dataset='NYU', gpu_or_cpu
 if __name__ == '__main__':
 
     # test NYU dataset
-    gt_file = '../dataset/NYU/test/joint_data.mat'
-    gt3D = loadGt(gt_file)
+    di = NYUImporter('../dataset/NYU/', cacheDir='../dataset/cache/')
+    gt3D = []
+    Seq2_1 = di.loadSequence('test_1')
+    Seq2_2 = di.loadSequence('test_2')
+    testSeqs = [Seq2_1, Seq2_2]
+    for seq in testSeqs:
+        gt3D.extend([j.gt3Dorig for j in seq.data])
+
+    gt3D = np.array(gt3D)
 
     if DEBUG:
         print 'gt3D.shape = ', gt3D.shape
@@ -173,18 +181,20 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model.append('baseline')
-    model.append('lstm_small_frame_size_no_concate')
-    model.append('lstm_small_frame_size')
-    weight_num.append('150000')
-    weight_num.append('200000')
-    weight_num.append('200000')
-    assert len(model) == len(weight_num), 'length is not equal!'
-
+    model.append(('baseline','150000')) # 20.9392899563mm
+    model.append(('lstm','170000')) # 13 20.9442366067mm 15 20.9589169614mm
+    model.append(('lstm_no_concate','180000')) # 15 21.044357862mm 18 21.0315737845mm
+    #model.append(('lstm_small_frame_size','200000')) # 20 22.7196790917mm
+    #model.append(('lstm_small_frame_size_no_concate','200000')) # 20 20.9209744816mm
+    #model.append(('bidirectional_lstm','190000'))
+    #model.append(('bidirectional_lstm_no_concate', '200000'))
+    #model.append(('bidirectional_lstm_small_frame_size', '200000'))  # 18 21.5291765649mm 20 21.5307424041mm
+    #model.append(('bidirectional_lstm_small_frame_size_no_concate', '200000'))
     for ind in xrange(len(model)):
-        joints, file_name = predictJoints(model[ind], weight_num[ind])
+        joints, file_name= predictJoints(model[ind])
+
         pred_joints.append(joints)
-        eval_prefix.append('NYU_' + model[ind] + '_' + weight_num[ind])
+        eval_prefix.append('NYU_' + model[ind][0] + '_' + model[ind][1])
         if not os.path.exists('../eval/'+eval_prefix[ind]+'/'):
             os.makedirs('../eval/'+eval_prefix[ind]+'/')
 
@@ -198,7 +208,7 @@ if __name__ == '__main__':
         hpe[ind].subfolder += eval_prefix[ind]+'/'
         mean_error = hpe[ind].getMeanError()
         max_error = hpe[ind].getMaxError()
-        print("Test on {}_{}".format(model[ind], weight_num[ind]))
+        print("Test on {}_{}".format(model[ind][0], model[ind][1]))
         print("Mean error: {}mm, max error: {}mm".format(mean_error, max_error))
         print("MD score: {}".format(hpe[ind].getMDscore(80)))
 
@@ -208,19 +218,15 @@ if __name__ == '__main__':
     #################################
     # BASELINE
     # Load the evaluation
-    di = NYUImporter('../dataset/NYU/', cacheDir='../dataset/cache/')
+
     data_baseline = di.loadBaseline('../dataset/NYU/test/test_predictions.mat', np.asarray(gt3D))
 
     hpe_base = NYUHandposeEvaluation(gt3D, data_baseline)
     hpe_base.subfolder += eval_prefix[0]+'/'
     print("Mean error: {}mm".format(hpe_base.getMeanError()))
 
-    plot_list = zip(model, hpe)
+    plot_list = zip(['_'.join(i) for i in model], hpe)
     hpe_base.plotEvaluation(eval_prefix[0], methodName='Tompson et al.', baseline=plot_list)
-
-    Seq2_1 = di.loadSequence('test_1')
-    Seq2_2 = di.loadSequence('test_2')
-    testSeqs = [Seq2_1, Seq2_2]
 
     for index in xrange(len(hpe)):
         ind = 0
@@ -236,4 +242,3 @@ if __name__ == '__main__':
                 jtI[joint, 1] = t[1]
             hpe[index].plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix[index], ind))
             ind+=1
-

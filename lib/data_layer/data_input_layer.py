@@ -329,3 +329,7 @@ class ICVLTestSeq2(videoRead):
         self.joints = 16
         self.dim = 3
         self.imagesize = 128
+
+if __name__ == '__main__':
+    data = DataRead()
+    data.loadData()

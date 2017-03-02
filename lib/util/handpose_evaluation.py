@@ -33,7 +33,7 @@ from data.transformations import transformPoint2D
 import progressbar as pb
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy
-from util.vtkpointcloud import VtkPointCloud
+#from util.vtkpointcloud import VtkPointCloud
 from sklearn import mixture
 
 __author__ = "Markus Oberweger <oberweger@icg.tugraz.at>"
@@ -615,6 +615,12 @@ class ICVLHandposeEvaluation(HandposeEvaluation):
         import matplotlib
 
         # setup specific stuff
+        # C: Palm,
+        # T: Thumb root, Thumb middle, Thumb tip,
+        # I: Index root, Index mid, Index tip,
+        # M: Middle root, Middle mid, Middle tip,
+        # R: Ring root, Ring mid, Ring tip,
+        # P: Pinky root, Pinky mid, Pinky tip
         self.jointNames = ('C', 'T1', 'T2', 'T3', 'I1', 'I2', 'I3', 'M1', 'M2', 'M3', 'R1', 'R2', 'R3', 'P1', 'P2', 'P3')
         self.jointConnections = [[0, 1], [1, 2], [2, 3], [0, 4], [4, 5], [5, 6], [0, 7], [7, 8], [8, 9], [0, 10],
                                  [10, 11], [11, 12], [0, 13], [13, 14], [14, 15]]
@@ -675,6 +681,12 @@ class NYUHandposeEvaluation(HandposeEvaluation):
                                           matplotlib.colors.hsv_to_rgb(numpy.asarray([[[0.16, 1, 0.7]]]))[0, 0], matplotlib.colors.hsv_to_rgb(numpy.asarray([[[0.16, 1, 0.7]]]))[0, 0], matplotlib.colors.hsv_to_rgb(numpy.asarray([[[0.16, 1, 1.0]]]))[0, 0], matplotlib.colors.hsv_to_rgb(numpy.asarray([[[0.16, 1, 1.0]]]))[0, 0]]
 
         elif joints == 'eval':
+            # C: Palm,
+            # T: Thumb root, Thumb middle, Thumb tip,
+            # I: Index root, Index mid, Index tip,
+            # M: Middle root, Middle mid, Middle tip,
+            # R: Ring root, Ring mid, Ring tip,
+            # P: Pinky root, Pinky mid, Pinky tip
             self.jointNames = ('P1', 'P2', 'R1', 'R2', 'M1', 'M2', 'I1', 'I2', 'T1', 'T2', 'T3', 'W1', 'W2', 'C')
             self.jointConnections = [[13, 1], [1, 0], [13, 3], [3, 2], [13, 5], [5, 4], [13, 7], [7, 6], [13, 10],
                                      [10, 9], [9, 8], [13, 11], [13, 12]]
