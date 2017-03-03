@@ -17,4 +17,4 @@ echo Logging to "$LOG_FILE"
 
 $TOOL/caffe train -solver $MODELS/solver_hand_lstm_small_frame_size_no_concate.prototxt \
 		  -weights $CAFFEMODEL/hand_baseline/hand_baseline_iter_150000.caffemodel \
-		  -gpu 1
+		  -gpu 0
