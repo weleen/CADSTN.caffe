@@ -180,7 +180,7 @@ layer {
 	pooling_param {
 		pool: MAX
 		stride: 2
-		kernel_size: 2
+		kernel_size: 3
 	}
 }
 

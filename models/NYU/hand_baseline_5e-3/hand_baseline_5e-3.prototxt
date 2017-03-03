@@ -1,4 +1,4 @@
-name: "baseline-small"
+name: "baseline_5e-3"
 
 layer {
 	name: "data"
@@ -9,7 +9,7 @@ layer {
   	top: "inds"
   	hdf5_data_param {
     	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_train.txt"
-    	batch_size: 256
+    	batch_size: 32
   	}
   	include {
     	phase: TRAIN
@@ -184,10 +184,99 @@ layer {
 	}
 }
 
+# conv3
+
+layer {
+	name: "res3_branch1"
+	type: "Convolution"
+	bottom: "pool2"
+	top: "res3_branch1"
+	convolution_param {
+		num_output: 64
+		kernel_size: 1
+		pad: 0
+		stride: 1
+		bias_term: false
+		weight_filler {
+			type: "xavier"
+		}
+	}
+}
+
+layer {
+	name: "res3_branch2a"
+	type: "Convolution"
+	bottom: "pool2"
+	top: "res3_branch2a"
+	convolution_param {
+		num_output: 64
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "relu_res3_branch2a"
+	type: "ReLU"
+	bottom: "res3_branch2a"
+	top: "res3_branch2a"
+}
+
+layer {
+	name: "res3_branch2b"
+	type: "Convolution"
+	bottom: "res3_branch2a"
+	top: "res3_branch2b"
+	convolution_param {
+		num_output: 64
+		kernel_size: 3
+		pad: 1
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
+}
+
+layer {
+	name: "res3"
+	type: "Eltwise"
+	bottom: "res3_branch1"
+	bottom: "res3_branch2b"
+	top: "res3"
+}
+
+layer {
+	name: "relu_res3"
+	type: "ReLU"
+	bottom: "res3"
+	top: "res3"
+}
+
+layer {
+	name: "pool3"
+	type: "Pooling"
+	bottom: "res3"
+	top: "pool3"
+	pooling_param {
+		pool: MAX
+		stride: 2
+		kernel_size: 3
+	}
+}
+
 layer {
 	name: "fc1"
 	type: "InnerProduct"
-	bottom: "pool2"
+	bottom: "pool3"
 	top: "fc1"
 	inner_product_param {
 		num_output: 2048
@@ -246,6 +335,14 @@ layer {
     }
 }
 
+layer {
+	name: "dummyloss"
+	type: "EuclideanLoss"
+	bottom: "joint_pred"
+	bottom: "joint"
+	top: "dummyloss"
+	loss_weight: 0
+}
 
 layer {
 	name: "loss"
