@@ -567,7 +567,12 @@ class NYUImporter(DepthImporter):
         pbar.start()
 
         data = []
+        if flip:
+            data_flip = []
+        if rotation:
+            data_rotation = []
         i=0
+
         for line in range(joints3D.shape[0]):
             dptFileName = '{0:s}/depth_1_{1:07d}.png'.format(objdir, line+1)
             # augment the training dataset
@@ -575,12 +580,10 @@ class NYUImporter(DepthImporter):
                 assert seqName == 'train', 'we only flip the training data'
                 # vertical(0) or horizantal(1) flip
                 flip_type = np.random.randint(2)
-                data_flip = []
             if rotation:
                 assert seqName == 'train', 'we only rotate the training data'
                 # 90', 180', or 270' rotation degree
                 rotation_degree = np.random.randint(1, 4) * 90
-                data_rotation = []
                 
             if not os.path.isfile(dptFileName):
                 if seqName == 'test_1' and line <= 2439 and line >= 0:
