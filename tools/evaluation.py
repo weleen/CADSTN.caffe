@@ -82,7 +82,7 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
     net = caffe.Net(model_def, model_weights, caffe.TEST)
 
     # extract seq_size (video num), frame_size (frames in video) and joint_size (dimension need to regress) from the blob
-    if model_name == 'baseline':
+    if 'baseline' in model_name:
         frame_size, joint_size = net.blobs['joint_pred'].data.shape
         seq_size = 1
     else:
@@ -109,6 +109,7 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
     if store:
         # store the predicted xyz into files
         file_name = '../result/OURS/' + dataset + '/hand_' + model_name + '_' + weights_num + '.txt'
+        file_name_uvd = '../result/OURS/' + dataset + '/hand_' + model_name + '_' + weights_num + '_uvd' + '.txt'
 
         if os.path.isfile(file_name):
             print '{} exists, read file directly.'.format(file_name)
@@ -124,7 +125,7 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
         for j, ind in enumerate(net.blobs['inds'].data):
             row = j / seq_size
             col = j % seq_size
-            if model_name == 'baseline':
+            if 'baseline' in model_name:
                 if ind <= 2440:
                     predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
                                                       300 / 2 + net.blobs['com'].data[j].reshape(1, dim))
@@ -147,14 +148,14 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
                     f.write("%s " % item)
                 f.write("\n")
         predicted_joints = loadPredFile(file_name)
-    else:
-        # predicted_joints is inited by [None], so we must assign the variable again to
-        # get the right shape
-        tmp = np.zeros((test_num, joint_size / dim, dim))
-        tmp = predicted_joints
-        predicted_joints = tmp
-        print predicted_joints.shape
-        file_name = None
+
+        print 'write the result in uvd coordinate in {}'.format(file_name_uvd)
+        with open(file_name_uvd, 'w') as f:
+            for i in xrange(predicted_joints.shape[0]):
+                predicted_joints_uvd = NYUImporter.joints3DToImg(predicted_joints[i])
+                for item in predicted_joints_uvd.reshape(joint_size):
+                    f.write("%s "% item)
+                f.write("\n")
 
     return predicted_joints, file_name
 
@@ -181,14 +182,17 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model.append(('baseline','150000')) # 20.9392899563mm
-    model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
-    model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
-    model.append(('lstm_small_frame_size','200000')) # 20 22.7196790917mm
-    model.append(('lstm_small_frame_size_no_concate','200000')) # 20 20.9209744816mm
+    #model.append(('baseline','160000')) # 20.9392899563mm
+    model.append(('baseline_concate_features', '150000'))
+    #model.append(('baseline_small', '150000'))
+    #model.append(('baseline_concate_features', '150000'))
+    #model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
+    #model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
+    #model.append(('lstm_small_frame_size','200000')) # 20 22.7196790917mm
+    #model.append(('lstm_small_frame_size_no_concate','200000')) # 20 20.9209744816mm
     #model.append(('bidirectional_lstm','190000'))
     #model.append(('bidirectional_lstm_no_concate', '200000'))
-    model.append(('bidirectional_lstm_small_frame_size', '200000'))  # 18 21.5291765649mm 20 21.5307424041mm
+    #model.append(('bidirectional_lstm_small_frame_size', '200000'))  # 18 21.5291765649mm 20 21.5307424041mm
     #model.append(('bidirectional_lstm_small_frame_size_no_concate', '200000'))
     for ind in xrange(len(model)):
         joints, file_name= predictJoints(model[ind])
@@ -201,8 +205,6 @@ if __name__ == '__main__':
         if DEBUG:
             print 'joints.shape = ', joints.shape
             print 'joints[0] = ', joints[0]
-            print 'type(joints[0]) = ', type(joints[0])
-            print 'type(joints[0][0] = ', type(joints[0][0])
 
         hpe.append(NYUHandposeEvaluation(gt3D, joints))
         hpe[ind].subfolder += eval_prefix[ind]+'/'

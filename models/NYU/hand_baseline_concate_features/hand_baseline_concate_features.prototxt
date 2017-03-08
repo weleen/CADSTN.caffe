@@ -9,7 +9,7 @@ layer {
   	top: "inds"
   	hdf5_data_param {
     	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_train.txt"
-    	batch_size: 256
+    	batch_size: 512
   	}
   	include {
     	phase: TRAIN
@@ -90,8 +90,8 @@ layer {
 	top: "pool1"
 	pooling_param {
 		pool: MAX
-		kernel_size: 3
-		stride: 2
+		kernel_size: 5
+		stride: 3
 	}
 }
 
@@ -102,8 +102,8 @@ layer {
     top: "pool1_downsample"
     convolution_param {
     	num_output: 16
-        kernel_size: 5
-        pad: 2
+        kernel_size: 6
+        #pad: 2
         stride: 4
         bias_term: false
         weight_filler {
@@ -209,7 +209,6 @@ layer {
     convolution_param {
     	num_output: 32
         kernel_size: 3
-        pad: 1
         stride: 2
         bias_term: false
         weight_filler {

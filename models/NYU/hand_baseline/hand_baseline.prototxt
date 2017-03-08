@@ -90,8 +90,8 @@ layer {
 	top: "pool1"
 	pooling_param {
 		pool: MAX
-		kernel_size: 3
-		stride: 2
+		kernel_size: 5
+		stride: 3
 	}
 }
 
@@ -333,15 +333,6 @@ layer {
     inner_product_param {
     	num_output: 42 # 3*J
     }
-}
-
-layer {
-	name: "dummyloss"
-	type: "EuclideanLoss"
-	bottom: "joint_pred"
-	bottom: "joint"
-	top: "dummyloss"
-	loss_weight: 0
 }
 
 layer {
