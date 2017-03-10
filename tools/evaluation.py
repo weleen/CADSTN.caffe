@@ -109,7 +109,6 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
     if store:
         # store the predicted xyz into files
         file_name = '../result/OURS/' + dataset + '/hand_' + model_name + '_' + weights_num + '.txt'
-        file_name_uvd = '../result/OURS/' + dataset + '/hand_' + model_name + '_' + weights_num + '_uvd' + '.txt'
 
         if os.path.isfile(file_name):
             print '{} exists, read file directly.'.format(file_name)
@@ -149,14 +148,6 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
                 f.write("\n")
         predicted_joints = loadPredFile(file_name)
 
-        print 'write the result in uvd coordinate in {}'.format(file_name_uvd)
-        with open(file_name_uvd, 'w') as f:
-            for i in xrange(predicted_joints.shape[0]):
-                predicted_joints_uvd = NYUImporter.joints3DToImg(predicted_joints[i])
-                for item in predicted_joints_uvd.reshape(joint_size):
-                    f.write("%s "% item)
-                f.write("\n")
-
     return predicted_joints, file_name
 
 
@@ -182,10 +173,8 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    #model.append(('baseline','160000')) # 20.9392899563mm
-    model.append(('baseline_concate_features', '150000'))
-    #model.append(('baseline_small', '150000'))
-    #model.append(('baseline_concate_features', '150000'))
+    model.append(('baseline','150000')) # 20.9392899563mm
+    model.append(('baseline_concate_features', '200000'))
     #model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
     #model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
     #model.append(('lstm_small_frame_size','200000')) # 20 22.7196790917mm

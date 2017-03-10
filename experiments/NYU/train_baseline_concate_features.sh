@@ -16,5 +16,4 @@ exec &> >(tee -a "$LOG_FILE")
 echo Logging to "$LOG_FILE"
 
 $TOOL/caffe train -solver $MODELS/solver_hand_baseline_concate_features.prototxt \
-                  -snapshot $CAFFEMODEL/hand_baseline_concate_features/hand_baseline_concate_featues_iter_50000.solverstate \
 		  -gpu 1

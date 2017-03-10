@@ -1,33 +1,36 @@
-name: "hand-lstm-small-frame-size"
+name: "baseline_222"
 
 layer {
 	name: "data"
-	type: "Input"
-	top: "depth"
-	input_param {
-		shape: {
-			dim: 3
-			dim: 1
-			dim: 128
-			dim: 128
-		}
-	}
+  	type: "HDF5Data"
+  	top: "depth"
+  	top: "joint"
+  	top: "com"
+  	top: "inds"
+  	hdf5_data_param {
+    	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_train.txt"
+    	batch_size: 512
+  	}
+  	include {
+    	phase: TRAIN
+  	}
 }
 
 layer {
-    name: "clip_markers"
-    type: "Input"
-    top: "clip_markers"
-    input_param {
-        shape: {
-            dim: 3
-            dim: 1
-            dim: 1
-            dim: 1
-        }
-    }
+  	name: "data"
+  	type: "HDF5Data"
+  	top: "depth"
+  	top: "joint"
+  	top: "com"
+  	top: "inds"
+  	hdf5_data_param {
+    	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_test.txt"
+	    batch_size: 64
+  	}
+  	include {
+    	phase: TEST
+  	}
 }
-
 # conv1
 
 layer {
@@ -70,7 +73,7 @@ layer {
 		bias_filler {
 			type: "constant"
 		}
-	}
+	}	
 }
 
 layer {
@@ -177,7 +180,7 @@ layer {
 	pooling_param {
 		pool: MAX
 		stride: 2
-		kernel_size: 3
+		kernel_size: 2
 	}
 }
 
@@ -297,94 +300,52 @@ layer {
 }
 
 layer {
-    name: "reshape-data"
-    type: "Reshape"
-    bottom: "fc1"
-    top: "reshape-data"
-    reshape_param {
-        shape {
-            dim: 3
-            dim: 1
-            dim: 2048
-        }
-    }
+	name: "fc2"
+	type: "InnerProduct"
+	bottom: "fc1"
+	top: "fc2"
+	inner_product_param {
+		num_output: 2048
+		weight_filler {
+			type: "xavier"
+		}
+		bias_filler {
+			type: "constant"
+		}
+	}
 }
 
 layer {
-    name: "reshape-cm"
-    type: "Reshape"
-    bottom: "clip_markers"
-    top: "reshape-cm"
-    reshape_param {
-        shape {
-            dim: 3
-            dim: 1
-        }
-    }
-}
-
-layer {
-    name: "lstm"
-    type: "LSTM"
-    bottom: "reshape-data"
-    bottom: "reshape-cm"
-    top: "lstm"
-    recurrent_param {
-        num_output: 1024
-        weight_filler {
-            type: "uniform"
-            min: -0.01
-            max: 0.01
-        }
-        bias_filler {
-            type: "constant"
-            value: 0
-        }
-    }
-}
-
-layer {
-    name: "lstm-drop"
+	name: "drop2"
     type: "Dropout"
-    bottom: "lstm"
-    top: "lstm"
+    bottom: "fc2"
+    top: "fc2"
     dropout_param {
-        dropout_ratio: 0.5
+    	dropout_ratio: 0.5
     }
 }
 
 layer {
-    name: "concat-feature"
-    type: "Concat"
-    bottom: "lstm"
-    bottom: "reshape-data"
-    top: "concat-feature"
-    concat_param {
-        axis: 2
-    }
-}
-
-layer {
-    name: "pred_joint"
+	name: "pred"
     type: "InnerProduct"
-    bottom: "concat-feature"
-    top: "pred_joint"
-    param {
-        lr_mult: 1
-        decay_mult: 1
-    }
-    param {
-        lr_mult: 2
-        decay_mult: 0
-    }
+    bottom: "fc2"
+    top: "joint_pred"
     inner_product_param {
-        num_output: 42
-        weight_filler {
-            type: "xavier"
-        }
-        bias_filler {
-            type: "constant"
-        }
-        axis: 2
+    	num_output: 42 # 3*J
     }
+}
+
+layer {
+	name: "loss"
+	type: "EuclideanLoss"
+	bottom: "joint_pred"
+	bottom: "joint"
+	top: "loss"
+}
+
+layer {
+	name: "ignore"
+	type: "Silence"
+	bottom: "inds"
+	bottom: "com"
 }

@@ -46,6 +46,14 @@ layer {
 	type: "Convolution"
 	bottom: "depth"
 	top: "conv1_1"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 16
 		kernel_size: 3
@@ -71,6 +79,14 @@ layer {
 	type: "Convolution"
 	bottom: "conv1_1"
 	top: "conv1_2"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 16
 		kernel_size: 3
@@ -81,7 +97,7 @@ layer {
 		bias_filler {
 			type: "constant"
 		}
-	}
+	}	
 }
 
 layer {
@@ -98,8 +114,8 @@ layer {
 	top: "pool1"
 	pooling_param {
 		pool: MAX
-		kernel_size: 3
-		stride: 2
+		kernel_size: 5
+		stride: 3
 	}
 }
 
@@ -110,6 +126,10 @@ layer {
 	type: "Convolution"
 	bottom: "pool1"
 	top: "res2_branch1"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 32
 		kernel_size: 1
@@ -127,6 +147,14 @@ layer {
 	type: "Convolution"
 	bottom: "pool1"
 	top: "res2_branch2a"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 32
 		kernel_size: 3
@@ -152,6 +180,14 @@ layer {
 	type: "Convolution"
 	bottom: "res2_branch2a"
 	top: "res2_branch2b"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 32
 		kernel_size: 3
@@ -199,6 +235,10 @@ layer {
 	type: "Convolution"
 	bottom: "pool2"
 	top: "res3_branch1"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 64
 		kernel_size: 1
@@ -216,6 +256,14 @@ layer {
 	type: "Convolution"
 	bottom: "pool2"
 	top: "res3_branch2a"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 64
 		kernel_size: 3
@@ -241,6 +289,14 @@ layer {
 	type: "Convolution"
 	bottom: "res3_branch2a"
 	top: "res3_branch2b"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	convolution_param {
 		num_output: 64
 		kernel_size: 3
@@ -286,6 +342,14 @@ layer {
 	type: "InnerProduct"
 	bottom: "pool3"
 	top: "fc1"
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
+	param {
+		lr_mult: 0
+		decay_mult: 0
+	}
 	inner_product_param {
 		num_output: 2048
 		weight_filler {
@@ -306,6 +370,7 @@ layer {
     	dropout_ratio: 0.5
     }
 }
+
 
 layer {
     name: "reshape-data"
@@ -417,7 +482,7 @@ layer {
     bottom: "reshape-cm"
     top: "lstm"
     recurrent_param {
-        num_output: 1024
+        num_output: 2048
         weight_filler {
             type: "uniform"
             min: -0.01

@@ -46,7 +46,7 @@ layer {
 	type: "Convolution"
 	bottom: "depth"
 	top: "conv1_1"
-	prarm {
+	param {
 		lr_mult: 0
 		decay_mult: 0
 	}
@@ -79,7 +79,7 @@ layer {
 	type: "Convolution"
 	bottom: "conv1_1"
 	top: "conv1_2"
-	prarm {
+	param {
 		lr_mult: 0
 		decay_mult: 0
 	}
@@ -97,7 +97,7 @@ layer {
 		bias_filler {
 			type: "constant"
 		}
-	}
+	}	
 }
 
 layer {
@@ -114,8 +114,8 @@ layer {
 	top: "pool1"
 	pooling_param {
 		pool: MAX
-		kernel_size: 3
-		stride: 2
+		kernel_size: 5
+		stride: 3
 	}
 }
 
@@ -126,10 +126,6 @@ layer {
 	type: "Convolution"
 	bottom: "pool1"
 	top: "res2_branch1"
-	prarm {
-		lr_mult: 0
-		decay_mult: 0
-	}
 	param {
 		lr_mult: 0
 		decay_mult: 0
@@ -151,7 +147,7 @@ layer {
 	type: "Convolution"
 	bottom: "pool1"
 	top: "res2_branch2a"
-	prarm {
+	param {
 		lr_mult: 0
 		decay_mult: 0
 	}
@@ -184,7 +180,7 @@ layer {
 	type: "Convolution"
 	bottom: "res2_branch2a"
 	top: "res2_branch2b"
-	prarm {
+	param {
 		lr_mult: 0
 		decay_mult: 0
 	}
@@ -239,10 +235,6 @@ layer {
 	type: "Convolution"
 	bottom: "pool2"
 	top: "res3_branch1"
-	prarm {
-		lr_mult: 0
-		decay_mult: 0
-	}
 	param {
 		lr_mult: 0
 		decay_mult: 0
@@ -264,7 +256,7 @@ layer {
 	type: "Convolution"
 	bottom: "pool2"
 	top: "res3_branch2a"
-	prarm {
+	param {
 		lr_mult: 0
 		decay_mult: 0
 	}
@@ -297,7 +289,7 @@ layer {
 	type: "Convolution"
 	bottom: "res3_branch2a"
 	top: "res3_branch2b"
-	prarm {
+	param {
 		lr_mult: 0
 		decay_mult: 0
 	}
@@ -378,6 +370,7 @@ layer {
     	dropout_ratio: 0.5
     }
 }
+
 
 layer {
     name: "reshape-data"
