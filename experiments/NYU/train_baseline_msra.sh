@@ -16,4 +16,4 @@ exec &> >(tee -a "$LOG_FILE")
 echo Logging to "$LOG_FILE"
 
 $TOOL/caffe train -solver $MODELS/solver_hand_baseline_msra.prototxt \
-                  -gpu 1
+                  -gpu 0
