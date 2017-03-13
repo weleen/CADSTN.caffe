@@ -175,6 +175,7 @@ if __name__ == '__main__':
     # predict joint by ourselves in xyz coordinate
     model.append(('baseline','150000')) # 20.9392899563mm
     model.append(('baseline_concate_features', '200000'))
+    model.append(('baseline_msra', '300000'))
     #model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
     #model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
     #model.append(('lstm_small_frame_size','200000')) # 20 22.7196790917mm
