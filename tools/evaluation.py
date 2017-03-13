@@ -70,7 +70,7 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
     """
     model_name = model[0]
     weights_num = model[1]
-    model_def = '../models/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '_deploy.prototxt'
+    model_def = '../models/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '.prototxt'
     model_weights = '../weights/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '_iter_' + weights_num + '.caffemodel'
 
     assert os.path.isfile(model_def), '{} is not a file!'.format(model_def)
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     model.append(('baseline_concate_features', '200000'))
     model.append(('baseline_msra', '300000'))
     #model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
-    #model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
+    model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
     #model.append(('lstm_small_frame_size','200000')) # 20 22.7196790917mm
     #model.append(('lstm_small_frame_size_no_concate','200000')) # 20 20.9209744816mm
     #model.append(('bidirectional_lstm','190000'))
