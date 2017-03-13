@@ -70,7 +70,7 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
     """
     model_name = model[0]
     weights_num = model[1]
-    model_def = '../models/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '.prototxt'
+    model_def = '../models/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '_deploy.prototxt'
     model_weights = '../weights/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '_iter_' + weights_num + '.caffemodel'
 
     assert os.path.isfile(model_def), '{} is not a file!'.format(model_def)
