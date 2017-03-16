@@ -1,6 +1,6 @@
 test_iter: 516
 test_interval: 1000
-net: "models/NYU/hand_lstm_no_concate_lr10/hand_lstm_no_concate_lr10.prototxt"
+net: "models/NYU/hand_lstm_multi_branches/hand_lstm_multi_branches.prototxt"
 base_lr: 1e-4
 momentum: 0.9
 momentum2: 0.999
@@ -12,6 +12,6 @@ display: 200
 max_iter: 200000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "weights/NYU/hand_lstm_no_concate_lr10/hand_lstm_no_concate_lr10"
+snapshot_prefix: "weights/NYU/hand_lstm_multi_branches/hand_lstm_multi_branches"
 type: "Adam"
 solver_mode: GPU

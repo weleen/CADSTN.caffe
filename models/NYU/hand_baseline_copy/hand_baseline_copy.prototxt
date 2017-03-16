@@ -1,34 +1,50 @@
 name: "baseline"
 
 layer {
-  name: "data"
-    type: "HDF5Data"
+    name: "data"
+    type: "Python"
     top: "depth"
+    top: "gtorig"
+    top: "gtcrop"
+    top: "T"
+    top: "gt3Dorig"
+    top: "gt3Dcrop"
     top: "joint"
+    top: "clip_markers"
     top: "com"
+    top: "config"
     top: "inds"
-    hdf5_data_param {
-      source:"/home/wuyiming/git/Hand/dataset/cache/NYU_train.txt"
-      batch_size: 512
+    python_param {
+        module: "data_input_layer"
+        layer: "NYUTrainSeq"
+        param_str: '{"buffer_size": "512", "frame_size": "1", "shuffle": "true", "size": "96"}'
     }
-    include {
-      phase: TRAIN
+    include: {
+        phase: TRAIN
     }
 }
 
 layer {
     name: "data"
-    type: "HDF5Data"
+    type: "Python"
     top: "depth"
+    top: "gtorig"
+    top: "gtcrop"
+    top: "T"
+    top: "gt3Dorig"
+    top: "gt3Dcrop"
     top: "joint"
+    top: "clip_markers"
     top: "com"
+    top: "config"
     top: "inds"
-    hdf5_data_param {
-      source:"/home/wuyiming/git/Hand/dataset/cache/NYU_test.txt"
-      batch_size: 64
+    python_param {
+        module: "data_input_layer"
+        layer: "NYUTestSeq"
+        param_str: '{"buffer_size": "64", "frame_size": "1", "shuffle": "true", "size": "96"}'
     }
-    include {
-      phase: TEST
+    include: {
+        phase: TEST
     }
 }
 
@@ -93,8 +109,8 @@ layer {
   top: "pool1"
   pooling_param {
     pool: MAX
-    kernel_size: 5
-    stride: 3
+    kernel_size: 2
+    stride: 2
   }
 }
 layer {
@@ -441,14 +457,22 @@ layer {
   bottom: "joint"
   top: "loss"
   smooth_l1_loss_param {
-    sigma: 0.01
+    sigma: 10
   }
   loss_weight: 1
 }
 
 layer {
-    name: "ignore"
-    type: "Silence"
-    bottom: "com"
-    bottom: "inds"
+	name: "ignore"
+	type: "Silence"
+	bottom: "inds"
+	bottom: "com"
+	bottom: "config"
+	bottom: "clip_markers"
+	bottom: "gtorig"
+    bottom: "gtcrop"
+    bottom: "T"
+    bottom: "gt3Dorig"
+    bottom: "gt3Dcrop"
 }
+

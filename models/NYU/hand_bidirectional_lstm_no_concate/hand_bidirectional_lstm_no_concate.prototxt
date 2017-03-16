@@ -4,6 +4,11 @@ layer {
     name: "data"
     type: "Python"
     top: "depth"
+    top: "gtorig"
+    top: "gtcrop"
+    top: "T"
+    top: "gt3Dorig"
+    top: "gt3Dcrop"
     top: "joint"
     top: "clip_markers"
     top: "com"
@@ -12,7 +17,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTrainSeq"
-        param_str: "'sequence_num_size': '32 16'"
+        param_str: '{"buffer_size": "32", "frame_size": "16", "shuffle": "true", "size": "128"}'
     }
     include: {
         phase: TRAIN
@@ -23,6 +28,11 @@ layer {
     name: "data"
     type: "Python"
     top: "depth"
+    top: "gtorig"
+    top: "gtcrop"
+    top: "T"
+    top: "gt3Dorig"
+    top: "gt3Dcrop"
     top: "joint"
     top: "clip_markers"
     top: "com"
@@ -31,13 +41,13 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTestSeq"
-        param_str: "'sequence_num_size': '1 16'"
+        param_str: '{"buffer_size": "32", "frame_size": "16", "shuffle": "true", "size": "128"}'
     }
     include: {
         phase: TEST
-        #stage: "test-on-test"
     }
 }
+
 
 # conv1
 
@@ -114,8 +124,8 @@ layer {
 	top: "pool1"
 	pooling_param {
 		pool: MAX
-		kernel_size: 3
-		stride: 2
+		kernel_size: 5
+		stride: 3
 	}
 }
 
@@ -680,8 +690,13 @@ layer {
 
 layer {
 	name: "ignore"
-    type: "Silence"
-    bottom: "com"
-    bottom: "config"
-    bottom: "inds"
+	type: "Silence"
+	bottom: "inds"
+	bottom: "com"
+	bottom: "config"
+	bottom: "gtorig"
+    bottom: "gtcrop"
+    bottom: "T"
+    bottom: "gt3Dorig"
+    bottom: "gt3Dcrop"
 }

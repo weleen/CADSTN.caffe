@@ -1,7 +1,7 @@
 test_iter: 129
 test_interval: 1000
-net: "models/NYU/hand_baseline_msra/hand_baseline_msra.prototxt"
-base_lr: 1e-4
+net: "models/NYU/hand_baseline_deepprior/hand_baseline_deepprior.prototxt"
+base_lr: 1e-3
 momentum: 0.9
 momentum2: 0.999
 lr_policy: "step"
@@ -12,7 +12,7 @@ display: 200
 max_iter: 300000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "weights/NYU/hand_baseline_msra/hand_baseline_msra"
+snapshot_prefix: "weights/NYU/hand_baseline_deepprior/hand_baseline_deepprior"
 type: "Adam"
 solver_mode: GPU
 

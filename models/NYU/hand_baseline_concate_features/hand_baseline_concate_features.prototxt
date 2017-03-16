@@ -1,36 +1,53 @@
 name: "baseline-concate-features"
 
 layer {
-	name: "data"
-  	type: "HDF5Data"
-  	top: "depth"
-  	top: "joint"
-  	top: "com"
-  	top: "inds"
-  	hdf5_data_param {
-    	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_train.txt"
-    	batch_size: 512
-  	}
-  	include {
-    	phase: TRAIN
-  	}
+    name: "data"
+    type: "Python"
+    top: "depth"
+    top: "gtorig"
+    top: "gtcrop"
+    top: "T"
+    top: "gt3Dorig"
+    top: "gt3Dcrop"
+    top: "joint"
+    top: "clip_markers"
+    top: "com"
+    top: "config"
+    top: "inds"
+    python_param {
+        module: "data_input_layer"
+        layer: "NYUTrainSeq"
+        param_str: '{"buffer_size": "512", "frame_size": "1", "shuffle": "true", "size": "128"}'
+    }
+    include: {
+        phase: TRAIN
+    }
 }
 
 layer {
-  	name: "data"
-  	type: "HDF5Data"
-  	top: "depth"
-  	top: "joint"
-  	top: "com"
-  	top: "inds"
-  	hdf5_data_param {
-    	source:"/home/wuyiming/git/Hand/dataset/cache/NYU_test.txt"
-	    batch_size: 64
-  	}
-  	include {
-    	phase: TEST
-  	}
+    name: "data"
+    type: "Python"
+    top: "depth"
+    top: "gtorig"
+    top: "gtcrop"
+    top: "T"
+    top: "gt3Dorig"
+    top: "gt3Dcrop"
+    top: "joint"
+    top: "clip_markers"
+    top: "com"
+    top: "config"
+    top: "inds"
+    python_param {
+        module: "data_input_layer"
+        layer: "NYUTestSeq"
+        param_str: '{"buffer_size": "64", "frame_size": "1", "shuffle": "true", "size": "128"}'
+    }
+    include: {
+        phase: TEST
+    }
 }
+
 # conv1
 
 layer {
@@ -370,7 +387,7 @@ layer {
 }
 
 layer {
-	name: "pred"
+	name: "joint_pred"
     type: "InnerProduct"
     bottom: "fc2"
     top: "joint_pred"
@@ -392,4 +409,11 @@ layer {
 	type: "Silence"
 	bottom: "inds"
 	bottom: "com"
+	bottom: "config"
+    bottom: "clip_markers"
+    bottom: "gtorig"
+    bottom: "gtcrop"
+    bottom: "T"
+    bottom: "gt3Dorig"
+    bottom: "gt3Dcrop"
 }

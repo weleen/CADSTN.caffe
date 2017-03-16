@@ -2,120 +2,134 @@
 
 __author__ = 'WuYiming'
 
+import _init_paths
 import caffe
 import numpy as np
-import random
-import h5py
 import yaml
+from data.importers import NYUImporter, ICVLImporter
+from data.dataset import NYUDataset, ICVLDataset
 
-cachePath = '/home/wuyiming/git/Hand/dataset/cache/'
+root = '/home/wuyiming/git/Hand'
+cachePath = root + '/dataset/cache'
+DEBUG = False
 
 class DataRead(object):
-    """Read the data from h5py"""
-    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3):
+    """Read the data"""
+    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3, dsize=(96, 96)):
         """
         :param dataPath:
         :param name:
         """
         self.name = name
         self.phase = phase
-        self.cachePath = path
+        self.cachePath = path + str(dsize[0]) + '/'
         self.clip_length = clip_length # how many frames each sequence
         self.data = {}
         self.dim = dim
+        self.dsize = dsize
+
+    def convert(self, sequence, size_before=None):
+        """convert sequence data"""
+        config = sequence.config
+        if self.name == 'NYU':
+            Dataset = NYUDataset([sequence])
+        elif self.name == 'ICVL':
+            Dataset = ICVLDataset([sequence])
+        dpt, gt3D = Dataset.imgStackDepthOnly(sequence.name)
+
+        dataset = {}
+        gtorig = []
+        gtcrop = []
+        T = []
+        gt3Dorig = []
+        gt3Dcrop = []
+        com = []
+        fileName = []
+
+        size = len(sequence.data)
+        print('size of {} {} dataset is {}'.format(self.name, sequence.name, size))
+        for i in xrange(len(sequence.data)):
+            data = sequence.data[i]
+            gtorig.append(data.gtorig)
+            gtcrop.append(data.gtcrop)
+            T.append(data.T)
+            gt3Dorig.append(data.gt3Dorig)
+            gt3Dcrop.append(data.gt3Dcrop)
+            com.append(data.com)
+            if self.name == 'NYU':
+                fileName.append(int(data.fileName[-11:-4]))
+            elif self.name == 'ICVL' and size_before is not None:
+                fileName.append(int(data.fileName[(data.fileName.find('image_') + 6): \
+                    (data.fileName.find('.png'))]) + size_before)
+
+        dataset['depth'] = np.asarray(dpt)
+        dataset['gtorig'] = np.asarray(gtorig)
+        dataset['gtcrop'] = np.asarray(gtcrop)
+        dataset['T'] = np.asarray(T)
+        dataset['gt3Dorig'] = np.asarray(gt3Dorig)
+        dataset['gt3Dcrop'] = np.asarray(gt3Dcrop)
+        dataset['com'] = np.asarray(com)
+        dataset['inds'] = np.asarray(fileName)
+        dataset['config'] = np.asarray(config['cube']).reshape(1, self.dim).repeat(size, axis=0)
+        dataset['joint'] = np.asarray(gt3D)
+
+        return dataset
 
     def loadData(self):
         """
-        :return:
+        load the dataset
+        :return: dataset
         """
-        import os
-        if self.name == 'NYU' and self.phase == 'test':
-            # concate NYU test sequence together
-            assert os.path.isfile(self.cachePath + self.name + '_' + self.phase + '_1.h5')\
-            and os.path.isfile(self.cachePath + self.name + '_' + self.phase + '_2.h5'),\
-                '{} or {} is not exists!'.format((self.cachePath + self.name + '_' + self.phase + '_1.h5'), \
-                                                 (self.cachePath + self.name + '_' + self.phase + '_2.h5'))
-            dataFile_1 = h5py.File(self.cachePath + self.name + '_' + self.phase + '_1.h5', 'r')
-            dataFile_2 = h5py.File(self.cachePath + self.name + '_' + self.phase + '_2.h5', 'r')
-            size_1 = dataFile_1['com'].shape[0]
-            size_2 = dataFile_2['com'].shape[0]
+        print('create {} {} dataset'.format(self.name, self.phase))
+        if self.name == 'NYU':
+            di = NYUImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
+            if self.phase == 'train':
+                sequence = di.loadSequence('train', flip=True, rotation=True, dsize=self.dsize)  # train sequence
+                self.data = self.convert(sequence)
+            elif self.phase == 'test':
+                sequence1 = di.loadSequence('test_1', dsize=self.dsize)  # test sequence 1
+                sequence2 = di.loadSequence('test_2', dsize=self.dsize)  # test sequence 2
+                data_1 = self.convert(sequence1)
+                data_2 = self.convert(sequence2)
 
-            print('size of dataset is test1: {} and test2: {}'.format(size_1, size_2))
+                self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
+                self.data['gtorig'] = np.concatenate([data_1['gtorig'], data_2['gtorig']])
+                self.data['gtcrop'] = np.concatenate([data_1['gtcrop'], data_2['gtcrop']])
+                self.data['T'] = np.concatenate([data_1['T'], data_2['T']])
+                self.data['gt3Dorig'] = np.concatenate([data_1['gt3Dorig'], data_2['gt3Dorig']])
+                self.data['gt3Dcrop'] = np.concatenate([data_1['gt3Dcrop'], data_2['gt3Dcrop']])
+                self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
+                self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
+                self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
+                self.data['joint'] = np.concatenate([data_1['joint'], data_2['joint']])
 
-            self.data['com'] = np.array(dataFile_1['com']).tolist()
-            self.data['com'].extend(np.array(dataFile_2['com']).tolist())
-            self.data['com'] = np.array(self.data['com'])
+        elif self.name == 'ICVL':
+            di = ICVLImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
+            if self.phase == 'train':
+                sequence = di.loadSequence('train', dsize=self.dsize)  # use dataset totally
+                self.data = self.convert(sequence)
+            elif self.phase == 'test':
+                sequence1 = di.loadSequence('test_seq_1', dsize=self.dsize)  # test sequence 1
+                sequence2 = di.loadSequence('test_seq_2', dsize=self.dsize)  # test sequence 2
+                data_1 = self.convert(sequence1)
+                size_1 = data_1['com'].shape[0]
+                data_2 = self.convert(sequence2, size_before=size_1) # concate two test sequence together
 
-            self.data['inds'] = np.array(dataFile_1['inds']).tolist()
-            self.data['inds'].extend(np.array(dataFile_2['inds']).tolist())
-            self.data['inds'] = np.array(self.data['inds'])
+                self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
+                self.data['gtorig'] = np.concatenate([data_1['gtorig'], data_2['gtorig']])
+                self.data['gtcrop'] = np.concatenate([data_1['gtcrop'], data_2['gtcrop']])
+                self.data['T'] = np.concatenate([data_1['T'], data_2['T']])
+                self.data['gt3Dorig'] = np.concatenate([data_1['gt3Dorig'], data_2['gt3Dorig']])
+                self.data['gt3Dcrop'] = np.concatenate([data_1['gt3Dcrop'], data_2['gt3Dcrop']])
+                self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
+                self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
+                self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
+                self.data['joint'] = np.concatenate([data_1['joint'], data_2['joint']])
 
-            self.data['config'] = np.array(dataFile_1['config']).reshape(1, self.dim).repeat(size_1, axis=0).tolist()
-            self.data['config'].extend(np.array(dataFile_2['config']).reshape(1, self.dim).repeat(size_2, axis=0).tolist())
-            self.data['config'] = np.array(self.data['config'])
-
-            self.data['depth'] = np.array(dataFile_1['depth']).tolist()
-            self.data['depth'].extend(np.array(dataFile_2['depth']).tolist())
-            self.data['depth'] = np.array(self.data['depth'])
-
-            self.data['joint'] = np.array(dataFile_1['joint']).tolist()
-            self.data['joint'].extend(np.array(dataFile_2['joint']).tolist())
-            self.data['joint'] = np.array(self.data['joint'])
-        elif self.name == 'NYU' and self.phase == 'train':
-            assert os.path.isfile(self.cachePath + self.name + '_' + self.phase + '.h5'),\
-                '{} file is not exists!'.format(self.phase)
-            dataFile = h5py.File(self.cachePath + self.name + '_' + self.phase + '.h5', 'r')
-            size = dataFile['com'].shape[0]
-            print('size of dataset is {}'.format(size))
-            self.data['com'] = np.array(dataFile['com'])
-            self.data['inds'] = np.array(dataFile['inds'])
-            self.data['config'] = np.array(dataFile['config']).reshape(1, self.dim).repeat(size, axis=0)
-            self.data['depth'] = np.array(dataFile['depth'])
-            self.data['joint'] = np.array(dataFile['joint'])
-        elif self.name == 'ICVL' and self.phase == 'test_1':
-            # test seq 1, we test ICVL dataset seperately
-            File1 = self.cachePath + self.name + '_' + self.phase[:-1] + 'seq_1.h5'
-            assert os.path.isfile(File1), '{} is not exists!'.format(File1)
-
-            dataFile_1 = h5py.File(File1, 'r')
-            size_1 = dataFile_1['com'].shape[0]
-
-            print('size of dataset is test1: {}'.format(size_1))
-
-            self.data['com'] = np.array(dataFile_1['com'])
-            self.data['inds'] = np.array(dataFile_1['inds'])
-            self.data['config'] = np.array(dataFile_1['config']).reshape(1, self.dim).repeat(size_1, axis=0)
-            self.data['depth'] = np.array(dataFile_1['depth'])
-            self.data['joint'] = np.array(dataFile_1['joint'])
-        elif self.name == 'ICVL' and self.phase == 'test_2':
-            File2 = self.cachePath + self.name + '_' + self.phase[:-1] + 'seq_2.h5'
-            assert os.path.isfile(File2), '{} is not exists!'.format(File2)
-
-            dataFile_2 = h5py.File(File2, 'r')
-            size_2 = dataFile_2['com'].shape[0]
-
-            print('size of dataset is test1: {}'.format(size_2))
-
-            self.data['com'] = np.array(dataFile_2['com'])
-            self.data['inds'] = np.array(dataFile_2['inds'])
-            self.data['config'] = np.array(dataFile_2['config']).reshape(1, self.dim).repeat(size_2, axis=0)
-            self.data['depth'] = np.array(dataFile_2['depth'])
-            self.data['joint'] = np.array(dataFile_2['joint'])
-        elif self.name == 'ICVL' and self.phase == 'train':
-            assert os.path.isfile(self.cachePath + self.name + '_' + self.phase + '.h5'), \
-                '{} file is not exists!'.format(self.cachePath + self.name + '_' + self.phase + '.h5')
-            dataFile = h5py.File(self.cachePath + self.name + '_' + self.phase + '.h5', 'r')
-            size = dataFile['com'].shape[0]
-            print('size of dataset is {}'.format(size))
-            self.data['com'] = np.array(dataFile['com'])
-            self.data['inds'] = np.array(dataFile['inds'])
-            self.data['config'] = np.array(dataFile['config']).reshape(1, self.dim).repeat(size, axis=0)
-            self.data['depth'] = np.array(dataFile['depth'])
-            self.data['joint'] = np.array(dataFile['joint'])
         else:
             raise Exception('unknow dataset {} or phase {}.'.format(self.name, self.phase))
 
-        print('dataset: {} phase: {}'.format(self.name, self.phase))
+        return self.data
 
 
     def dataToSeq(self):
@@ -133,9 +147,14 @@ class DataRead(object):
                 if ind >= dataSize:
                     tmp = current_seq[-1]
                 else:
-                    tmp = {'com': self.data['com'][ind],
+                    tmp = {'depth': self.data['depth'][ind],
+                           'gtorig': self.data['gtorig'][ind],
+                           'gtcrop': self.data['gtcrop'][ind],
+                           'T': self.data['T'][ind],
+                           'gt3Dorig': self.data['gt3Dorig'][ind],
+                           'gt3Dcrop': self.data['gt3Dcrop'][ind],
+                           'com': self.data['com'][ind],
                            'inds': self.data['inds'][ind],
-                           'depth': self.data['depth'][ind],
                            'joint': self.data['joint'][ind],
                            'config': self.data['config'][ind],
                            'clip_markers': 1 if j != 0 else 0}
@@ -196,27 +215,48 @@ class videoRead(caffe.Layer):
         """setup for layer"""
         layer_params = yaml.load(self.param_str)
         # read the layer param contain the sequence number and sequence size
-        self.buffer_size, self.frames = map(int, layer_params['sequence_num_size'].split())
+        self.buffer_size = int(layer_params['buffer_size'])
+        self.frames = int(layer_params['frame_size'])
+        self.suffle = (layer_params['shuffle'] == "true")
+        self.imagesize = int(layer_params['size'])
         self.initialize()
 
-        dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames, self.dim)
+        dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames, \
+                              self.dim, dsize=(self.imagesize, self.imagesize))
         dataReader.loadData()
         self.seq_dict = dataReader.dataToSeq()
 
         self.sequence_generator = sequenceGenerator(self.buffer_size, self.frames,\
                                                    len(self.seq_dict), self.seq_dict)
 
-        self.top_names = ['depth', 'joint', 'clip_markers', 'com', 'config', 'inds']
+        self.top_names = ['depth', 'gtorig', 'gtcrop', 'T', 'gt3Dorig',
+                          'gt3Dcrop', 'joint', 'clip_markers', 'com', 'config', 'inds']
         print 'Outputs: ', self.top_names
         if len(top) != len(self.top_names):
             raise Exception('Incorrect number of outputs (expect %d, got %d)'\
                             %(len(self.top_names), len(top)))
 
+        if DEBUG:
+            print "configuration: "
+            print "dataset = {}, phase = {}".format(self.name, self.train_or_test)
+            print "buffer_size = {}, frame_size = {}".format(self.buffer_size, self.frames)
+            print "image_size = {}".format(self.imagesize)
+
         for top_index, name in enumerate(self.top_names):
             if name == 'depth':
                 shape = (self.N, 1, self.imagesize, self.imagesize)
+            elif name == 'gtorig':
+                shape = (self.N, self.joints, self.dim)
+            elif name == 'gtcrop':
+                shape = (self.N, self.joints, self.dim)
+            elif name == 'T':
+                shape = (self.N, 3 * 3)
+            elif name == 'gt3Dorig':
+                shape = (self.N, self.joints, self.dim)
+            elif name == 'gt3Dcrop':
+                shape = (self.N, self.joints, self.dim)
             elif name == 'joint':
-                shape = (self.N, self.dim * self.joints)
+                shape = (self.N, self.joints, self.dim)
             elif name == 'clip_markers':
                 shape = (self.N, )
             elif name == 'com':
@@ -234,29 +274,66 @@ class videoRead(caffe.Layer):
         data = self.sequence_generator()
 
         depth = np.zeros((self.N, 1, self.imagesize, self.imagesize))
-        joint = np.zeros((self.N, self.dim * self.joints))
+        gtorig = np.zeros((self.N, self.joints, self.dim))
+        gtcrop = np.zeros((self.N, self.joints, self.dim))
+        T = np.zeros((self.N, 3 * 3))
+        gt3Dorig = np.zeros((self.N, self.joints, self.dim))
+        gt3Dcrop = np.zeros((self.N, self.joints, self.dim))
+        joint = np.zeros((self.N, self.joints, self.dim))
         cm = np.zeros((self.N, ))
         com = np.zeros((self.N, self.dim))
         config = np.zeros((self.N, self.dim))
         inds = np.zeros((self.N))
-        #print 'data = ',data
-        #print 'data.shape = ',data.shape
 
         # rearrange the dataset for LSTM
         for i in xrange(self.frames):
             for j in xrange(self.buffer_size):
                 idx = i*self.buffer_size + j
                 depth[idx] = data[j][i]['depth']
-                joint[idx] = data[j][i]['joint'].reshape(self.joints*3)
+                gtorig[idx] = data[j][i]['gtorig']
+                gtcrop[idx] = data[j][i]['gtcrop']
+                T[idx] = data[j][i]['T'].reshape(3*3)
+                gt3Dorig[idx] = data[j][i]['gt3Dorig']
+                gt3Dcrop[idx] = data[j][i]['gt3Dcrop']
+                joint[idx] = data[j][i]['joint']
                 cm[idx] = data[j][i]['clip_markers']
                 com[idx] = data[j][i]['com']
                 config[idx] = data[j][i]['config']
                 inds[idx] = data[j][i]['inds']
 
+        if DEBUG:
+            print "top shape:"
+            print "top[depth] shape = {}, copy from {}".format(top[0].shape, depth.shape)
+            print "top[gtorig] shape = {}, copy from {}".format(top[1].shape, gtorig.shape)
+            print "top[gtcrop] shape = {}, copy from {}".format(top[2].shape, gtcrop.shape)
+            print "top[T] shape = {}, copy from {}".format(top[3].shape, T.shape)
+            print "top[gt3Dorig] shape = {}, copy from {}".format(top[4].shape, gt3Dorig.shape)
+            print "top[gt3Dcrop] shape = {}, copy from {}".format(top[5].shape, gt3Dcrop.shape)
+            print "top[joint] shape = {}, copy from {}".format(top[6].shape, joint.shape)
+            print "top[clip_markers] shape = {}, copy from {}".format(top[7].shape, cm.shape)
+            print "top[com] shape = {}, copy from {}".format(top[8].shape, com.shape)
+            print "top[config] shape = {}, copy from {}".format(top[9].shape, config.shape)
+            print "top[inds] shape = {}, copy from {}".format(top[10].shape, inds.shape)
+
         for top_index, name in zip(range(len(top)), self.top_names):
             if name == 'depth':
                 for i in range(self.N):
                     top[top_index].data[i, ...] = depth[i]
+            elif name == 'gtorig':
+                for i in range(self.N):
+                    top[top_index].data[i, ...] = gtorig[i]
+            elif name == 'gtcrop':
+                for i in range(self.N):
+                    top[top_index].data[i, ...] = gtcrop[i]
+            elif name == 'T':
+                for i in range(self.N):
+                    top[top_index].data[i, ...] = T[i]
+            elif name == 'gt3Dorig':
+                for i in range(self.N):
+                    top[top_index].data[i, ...] = gt3Dorig[i]
+            elif name == 'gt3Dcrop':
+                for i in range(self.N):
+                    top[top_index].data[i, ...] = gt3Dcrop[i]
             elif name == 'joint':
                 for i in range(self.N):
                     top[top_index].data[i, ...] = joint[i]
@@ -284,7 +361,6 @@ class NYUTrainSeq(videoRead):
         self.path = cachePath
         self.joints = 14
         self.dim = 3
-        self.imagesize = 128
 
 class NYUTestSeq(videoRead):
     def initialize(self):
@@ -295,7 +371,6 @@ class NYUTestSeq(videoRead):
         self.path = cachePath
         self.joints = 14
         self.dim = 3
-        self.imagesize = 128
 
 class ICVLTrainSeq(videoRead):
     def initialize(self):
@@ -306,30 +381,33 @@ class ICVLTrainSeq(videoRead):
         self.path = cachePath
         self.joints = 16
         self.dim = 3
-        self.imagesize = 128
 
-class ICVLTestSeq1(videoRead):
+class ICVLTestSeq(videoRead):
     def initialize(self):
         self.name = 'ICVL'
-        self.train_or_test = 'test_1'
+        self.train_or_test = 'test'
         self.N = self.buffer_size*self.frames
         self.idx = 0
         self.path = cachePath
         self.joints = 16
         self.dim = 3
-        self.imagesize = 128
 
-class ICVLTestSeq2(videoRead):
-    def initialize(self):
-        self.name = 'ICVL'
-        self.train_or_test = 'test_2'
-        self.N = self.buffer_size*self.frames
-        self.idx = 0
-        self.path = cachePath
-        self.joints = 16
-        self.dim = 3
-        self.imagesize = 128
 
 if __name__ == '__main__':
-    data = DataRead()
-    data.loadData()
+    #data = DataRead(name='NYU', phase='train',dsize=(128, 128))
+    #data_load = data.loadData()
+    #data = DataRead(name='NYU', phase='test', dsize=(128, 128))
+    #data_load = data.loadData()
+    #data = DataRead(name='ICVL', phase='train',dsize=(128, 128))
+    #data_load = data.loadData()
+    #data = DataRead(name='ICVL', phase='test', dsize=(128, 128))
+    #data_load = data.loadData()
+    
+    #data = DataRead(name='NYU', phase='train',dsize=(96, 96))
+    #data_load = data.loadData()
+    #data = DataRead(name='NYU', phase='test', dsize=(96, 96))
+    #data_load = data.loadData()
+    #data = DataRead(name='ICVL', phase='train',dsize=(96, 96))
+    #data_load = data.loadData()
+    #data = DataRead(name='ICVL', phase='test', dsize=(96, 96))
+    #data_load = data.loadData()

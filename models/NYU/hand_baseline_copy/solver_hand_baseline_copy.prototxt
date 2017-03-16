@@ -1,7 +1,7 @@
 test_iter: 129
 test_interval: 1000
 net: "models/NYU/hand_baseline_copy/hand_baseline_copy.prototxt"
-base_lr: 1e-4
+base_lr: 1e-3
 momentum: 0.9
 momentum2: 0.999
 lr_policy: "step"

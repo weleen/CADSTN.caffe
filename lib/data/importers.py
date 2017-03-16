@@ -237,7 +237,7 @@ class ICVLImporter(DepthImporter):
 
         return imgdata
         
-    def loadSequence(self,seqName,subSeq = None,Nmax=float('inf'),shuffle=False,rng=None,docom=False):
+    def loadSequence(self,seqName,subSeq = None,Nmax=float('inf'),shuffle=False,rng=None,docom=False,dsize=(128, 128)):
         """
         Load an image sequence from the dataset
         :param seqName: sequence name, e.g. train
@@ -249,7 +249,7 @@ class ICVLImporter(DepthImporter):
         if (subSeq is not None) and (not isinstance(subSeq,list)):
             raise TypeError("subSeq must be None or list")
 
-        config = {'cube':(250,250,250)}
+        config = {'cube':(200,200,200)}
         refineNet = None
 
         if subSeq is None:
@@ -370,7 +370,7 @@ class ICVLImporter(DepthImporter):
                 i+=1
                 continue
             try:
-                dpt, M, com = hd.cropArea3D(gtorig[0],size=config['cube'],docom=True)
+                dpt, M, com = hd.cropArea3D(gtorig[0],size=config['cube'], dsize=dsize)
             except UserWarning:
                 print("Skipping image {}, no hand detected".format(dptFileName))
                 continue
@@ -517,7 +517,7 @@ class NYUImporter(DepthImporter):
 
         return imgdata
 
-    def loadSequence(self,seqName,allJoints=False,Nmax=float('inf'),shuffle=False,rng=None,docom=False,flip=False,rotation=False):
+    def loadSequence(self,seqName,allJoints=False,Nmax=float('inf'),shuffle=False,rng=None,docom=False,flip=False,rotation=False,dsize=(128, 128)):
         """
         Load an image sequence from the dataset
         :param seqName: sequence name, e.g. train
@@ -698,9 +698,9 @@ class NYUImporter(DepthImporter):
                 continue
             try:
                 if allJoints:
-                    dpt, M, com = hd.cropArea3D(gtorig[34], size=config['cube'],docom=True)
+                    dpt, M, com = hd.cropArea3D(gtorig[34], size=config['cube'], dsize=dsize)
                 else:
-                    dpt, M, com = hd.cropArea3D(gtorig[13], size=config['cube'],docom=True)
+                    dpt, M, com = hd.cropArea3D(gtorig[13], size=config['cube'], dsize=dsize)
             except UserWarning:
                 print("Skipping image {}, no hand detected".format(dptFileName))
                 continue
@@ -710,9 +710,9 @@ class NYUImporter(DepthImporter):
                 hd_flip = HandDetector(dpt_flip, self.fx, self.fy, refineNet=refineNet, importer=self)
                 try:
                     if allJoints:
-                        dpt_flip, M_flip, com_flip = hd_flip.cropArea3D(gtorig_flip[34], size=config['cube'],docom=True)
+                        dpt_flip, M_flip, com_flip = hd_flip.cropArea3D(gtorig_flip[34], size=config['cube'], dsize=dsize)
                     else:
-                        dpt_flip, M_flip, com_flip = hd_flip.cropArea3D(gtorig_flip[13], size=config['cube'],docom=True)
+                        dpt_flip, M_flip, com_flip = hd_flip.cropArea3D(gtorig_flip[13], size=config['cube'], dsize=dsize)
                 except UserWarning:
                     print("Skipping image {}, no hand detected".format(dptFileName))
                     continue
@@ -721,9 +721,9 @@ class NYUImporter(DepthImporter):
                 hd_rotation = HandDetector(dpt_rotation, self.fx, self.fy, refineNet=refineNet, importer=self)
                 try:
                     if allJoints:
-                        dpt_rotation, M_rotation, com_rotation = hd_rotation.cropArea3D(gtorig_rotation[34], size=config['cube'],docom=True)
+                        dpt_rotation, M_rotation, com_rotation = hd_rotation.cropArea3D(gtorig_rotation[34], size=config['cube'], dsize=dsize)
                     else:
-                        dpt_rotation, M_rotation, com_rotation = hd_rotation.cropArea3D(gtorig_rotation[13], size=config['cube'],docom=True)
+                        dpt_rotation, M_rotation, com_rotation = hd_rotation.cropArea3D(gtorig_rotation[13], size=config['cube'], dsize=dsize)
                 except UserWarning:
                     print("Skipping image {}, no hand detected".format(dptFileName))
                     continue
