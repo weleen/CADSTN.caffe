@@ -411,3 +411,4 @@ if __name__ == '__main__':
     #data_load = data.loadData()
     #data = DataRead(name='ICVL', phase='test', dsize=(96, 96))
     #data_load = data.loadData()
+    pass

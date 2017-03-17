@@ -41,7 +41,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTestSeq"
-        param_str: '{"buffer_size": "32", "frame_size": "16", "shuffle": "true", "size": "128"}'
+        param_str: '{"buffer_size": "1", "frame_size": "16", "shuffle": "true", "size": "128"}'
     }
     include: {
         phase: TEST
