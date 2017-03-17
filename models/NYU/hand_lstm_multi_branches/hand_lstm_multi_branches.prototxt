@@ -1564,6 +1564,31 @@ layer {
 }
 
 layer {
+	name: "pred_joint"
+    type: "Concat"
+    bottom: "pred_P1"
+    bottom: "pred_P2"
+    bottom: "pred_R1"
+    bottom: "pred_R2"
+    bottom: "pred_M1"
+    bottom: "pred_M2"
+    bottom: "pred_I1"
+    bottom: "pred_I2"
+    bottom: "pred_T1"
+    bottom: "pred_T2"
+    bottom: "pred_T3"
+    bottom: "pred_W1"
+    bottom: "pred_W2"
+    bottom: "pred_C"
+    concat_param {
+    	axis: 1
+    }
+    include: {
+    	phase: TEST
+    }
+}
+
+layer {
 	name: "ignore"
 	type: "Silence"
 	bottom: "inds"
@@ -1575,4 +1600,3 @@ layer {
     bottom: "gt3Dorig"
     bottom: "gt3Dcrop"
 }
-

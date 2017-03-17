@@ -1,4 +1,4 @@
-name: "baseline-deepproir"
+name: "baseline-deepproir-concate-features"
 
 layer {
     name: "data"
@@ -86,6 +86,39 @@ layer {
 }
 
 layer {
+  name: "convL1_downsample"
+  type: "Convolution"
+  bottom: "convL1"
+  top: "convL1_downsample"
+  param {
+  	lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+  	lr_mult: 2  
+    decay_mult: 0
+  }
+  convolution_param {
+  	num_output: 8
+    kernel_size: 5
+    stride: 4
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "relu_convL1_downsample"
+  type: "ReLU"
+  bottom: "convL1_downsample"
+  top: "convL1_downsample"
+}
+
+layer {
   name: "convL2"
   type: "Convolution"
   bottom: "poolL1"
@@ -121,6 +154,16 @@ layer {
   }
 }
 
+layer {
+  name: "convL2_concate"
+  type: "Concat"
+  bottom: "convL2"
+  bottom: "convL1_downsample"
+  top: "convL2_concate"
+  concat_param {
+  	axis: 1
+  }
+}
 
 layer {
   name: "convL3"
@@ -147,9 +190,52 @@ layer {
 }
 
 layer {
+  name: "convL2_downsample"
+  type: "Convolution"
+  bottom: "convL2_concate"
+  top: "convL2_downsample"
+  param {
+  	lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+  	lr_mult: 2  
+    decay_mult: 0
+  }
+  convolution_param {
+  	num_output: 8
+    kernel_size: 5
+    stride: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "relu_convL2_downsample"
+  type: "ReLU"
+  bottom: "convL2_downsample"
+  top: "convL2_downsample"
+}
+
+layer {
+  name: "convL3_concate"
+  type: "Concat"
+  bottom: "convL3"
+  bottom: "convL2_downsample"
+  top: "convL3_concate"
+  concat_param {
+  	axis: 1
+  }
+}
+layer {
   name: "FC1"
   type: "InnerProduct"
-  bottom: "convL3"
+  bottom: "convL3_concate"
   top: "FC1"
   param {
     lr_mult: 1
