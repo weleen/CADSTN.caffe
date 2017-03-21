@@ -48,416 +48,261 @@ layer {
     }
 }
 
-# conv1
-
 layer {
-	name: "conv1_1"
-	type: "Convolution"
-	bottom: "depth"
-	top: "conv1_1"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 16
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_conv1_1"
-	type: "ReLU"
-	bottom: "conv1_1"
-	top: "conv1_1"
-}
-
-layer {
-	name: "conv1_2"
-	type: "Convolution"
-	bottom: "conv1_1"
-	top: "conv1_2"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 16
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}	
-}
-
-layer {
-	name: "relu_conv1_2"
-	type: "ReLU"
-	bottom: "conv1_2"
-	top: "conv1_2"
-}
-
-layer {
-	name: "pool1"
-	type: "Pooling"
-	bottom: "conv1_2"
-	top: "pool1"
-	pooling_param {
-		pool: MAX
-		kernel_size: 5
-		stride: 3
-	}
-}
-
-# conv2
-
-layer {
-	name: "res2_branch1"
-	type: "Convolution"
-	bottom: "pool1"
-	top: "res2_branch1"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 32
-		kernel_size: 1
-		pad: 0
-		stride: 1
-		bias_term: false
-		weight_filler {
-			type: "xavier"
-		}
-	}
-}
-
-layer {
-	name: "res2_branch2a"
-	type: "Convolution"
-	bottom: "pool1"
-	top: "res2_branch2a"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 32
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_res2_branch2a"
-	type: "ReLU"
-	bottom: "res2_branch2a"
-	top: "res2_branch2a"
-}
-
-layer {
-	name: "res2_branch2b"
-	type: "Convolution"
-	bottom: "res2_branch2a"
-	top: "res2_branch2b"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 32
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "res2"
-	type: "Eltwise"
-	bottom: "res2_branch1"
-	bottom: "res2_branch2b"
-	top: "res2"
-}
-
-layer {
-	name: "relu_res2"
-	type: "ReLU"
-	bottom: "res2"
-	top: "res2"
-}
-
-layer {
-	name: "pool2"
-	type: "Pooling"
-	bottom: "res2"
-	top: "pool2"
-	pooling_param {
-		pool: MAX
-		stride: 2
-		kernel_size: 3
-	}
-}
-
-# conv3
-
-layer {
-	name: "res3_branch1"
-	type: "Convolution"
-	bottom: "pool2"
-	top: "res3_branch1"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 64
-		kernel_size: 1
-		pad: 0
-		stride: 1
-		bias_term: false
-		weight_filler {
-			type: "xavier"
-		}
-	}
-}
-
-layer {
-	name: "res3_branch2a"
-	type: "Convolution"
-	bottom: "pool2"
-	top: "res3_branch2a"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 64
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_res3_branch2a"
-	type: "ReLU"
-	bottom: "res3_branch2a"
-	top: "res3_branch2a"
-}
-
-layer {
-	name: "res3_branch2b"
-	type: "Convolution"
-	bottom: "res3_branch2a"
-	top: "res3_branch2b"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 64
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "res3"
-	type: "Eltwise"
-	bottom: "res3_branch1"
-	bottom: "res3_branch2b"
-	top: "res3"
-}
-
-layer {
-	name: "relu_res3"
-	type: "ReLU"
-	bottom: "res3"
-	top: "res3"
-}
-
-layer {
-	name: "pool3"
-	type: "Pooling"
-	bottom: "res3"
-	top: "pool3"
-	pooling_param {
-		pool: MAX
-		stride: 2
-		kernel_size: 3
-	}
-}
-
-layer {
-	name: "fc1_center"
-	type: "InnerProduct"
-	bottom: "pool3"
-	top: "fc1_center"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop1_center"
-    type: "Dropout"
-    bottom: "fc1_center"
-    top: "fc1_center"
-    dropout_param {
-    	dropout_ratio: 0.5
+  name: "convL1"
+  type: "Convolution"
+  bottom: "depth"
+  top: "convL1"
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 8
+    kernel_size: 5
+    weight_filler {
+      type: "xavier"
     }
-}
-
-layer {
-	name: "fc1_second"
-	type: "InnerProduct"
-	bottom: "pool3"
-	top: "fc1_second"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mutl: 0
-	}
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop1_second"
-    type: "Dropout"
-    bottom: "fc1_second"
-    top: "fc1_second"
-    dropout_param {
-    	dropout_ratio: 0.5
+    bias_filler {
+      type: "constant"
     }
+  }
 }
 
 layer {
-	name: "fc1_third"
-	type: "InnerProduct"
-	bottom: "pool3"
-	top: "fc1_third"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mutl: 0
-	}
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
+  name: "ReLUconvL1"
+  type: "ReLU"
+  bottom: "convL1"
+  top: "convL1"
+}
+
+
+layer {
+  name: "poolL1"
+  type: "Pooling"
+  bottom: "convL1"
+  top: "poolL1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 4
+    stride: 4
+  }
 }
 
 layer {
-	name: "drop1_third"
-    type: "Dropout"
-    bottom: "fc1_third"
-    top: "fc1_third"
-    dropout_param {
-    	dropout_ratio: 0.5
+  name: "convL2"
+  type: "Convolution"
+  bottom: "poolL1"
+  top: "convL2"
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 8
+    kernel_size: 5
+    weight_filler {
+      type: "xavier"
     }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUconvL2"
+  type: "ReLU"
+  bottom: "convL2"
+  top: "convL2"
+}
+
+layer {
+  name: "poolL2"
+  type: "Pooling"
+  bottom: "convL2"
+  top: "poolL2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+
+
+layer {
+  name: "convL3"
+  type: "Convolution"
+  bottom: "poolL2"
+  top: "convL3"
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 8
+    kernel_size: 3
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUconvL3"
+  type: "ReLU"
+  bottom: "convL3"
+  top: "convL3"
+}
+
+layer {
+  name: "FC1-center"
+  type: "InnerProduct"
+  bottom: "convL3"
+  top: "FC1-center"
+  param {
+  	lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+  	lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUFC1-center"
+  type: "ReLU"
+  bottom: "FC1-center"
+  top: "FC1-center"
+}
+
+layer {
+  name: "DropoutFC1-center"
+  type: "Dropout"
+  bottom: "FC1-center"
+  top: "FC1-center"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
+}
+
+layer {
+  name: "FC1-second"
+  type: "InnerProduct"
+  bottom: "convL3"
+  top: "FC1-second"
+  param {
+  	lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+  	lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUFC1-second"
+  type: "ReLU"
+  bottom: "FC1-second"
+  top: "FC1-second"
+}
+
+layer {
+  name: "DropoutFC1-second"
+  type: "Dropout"
+  bottom: "FC1-second"
+  top: "FC1-second"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
+}
+
+layer {
+  name: "FC1-third"
+  type: "InnerProduct"
+  bottom: "convL3"
+  top: "FC1-third"
+  param {
+  	lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+  	lr_mult: 2
+    decay_mult: 0
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUFC1-third"
+  type: "ReLU"
+  bottom: "FC1-third"
+  top: "FC1-third"
+}
+
+layer {
+  name: "DropoutFC1-third"
+  type: "Dropout"
+  bottom: "FC1-third"
+  top: "FC1-third"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
 }
 
 layer {
     name: "reshape_data_center"
     type: "Reshape"
-    bottom: "fc1_center"
+    bottom: "FC1-center"
     top: "reshape_data_center"
     reshape_param {
         shape {
             dim: 16
             dim: 32
-            dim: 2048
+            dim: 1024
         }
     }
     include: {
@@ -468,13 +313,13 @@ layer {
 layer {
     name: "reshape_data_center"
     type: "Reshape"
-    bottom: "fc1_center"
+    bottom: "FC1-center"
     top: "reshape_data_center"
     reshape_param {
         shape {
             dim: 16
             dim: 1
-            dim: 2048
+            dim: 1024
         }
     }
     include: {
@@ -485,13 +330,13 @@ layer {
 layer {
     name: "reshape_data_second"
     type: "Reshape"
-    bottom: "fc1_second"
+    bottom: "FC1-second"
     top: "reshape_data_second"
     reshape_param {
         shape {
             dim: 16
             dim: 32
-            dim: 2048
+            dim: 1024
         }
     }
     include: {
@@ -502,13 +347,13 @@ layer {
 layer {
     name: "reshape_data_second"
     type: "Reshape"
-    bottom: "fc1_second"
+    bottom: "FC1-second"
     top: "reshape_data_second"
     reshape_param {
         shape {
             dim: 16
             dim: 1
-            dim: 2048
+            dim: 1024
         }
     }
     include: {
@@ -519,13 +364,13 @@ layer {
 layer {
     name: "reshape_data_third"
     type: "Reshape"
-    bottom: "fc1_third"
+    bottom: "FC1-third"
     top: "reshape_data_third"
     reshape_param {
         shape {
             dim: 16
             dim: 32
-            dim: 2048
+            dim: 1024
         }
     }
     include: {
@@ -536,13 +381,13 @@ layer {
 layer {
     name: "reshape_data_third"
     type: "Reshape"
-    bottom: "fc1_third"
+    bottom: "FC1-third"
     top: "reshape_data_third"
     reshape_param {
         shape {
             dim: 16
             dim: 1
-            dim: 2048
+            dim: 1024
         }
     }
     include: {
@@ -597,25 +442,6 @@ layer {
             dim: 3
         }
     }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_P1"
-    type: "Reshape"
-    bottom: "slice_joint_P1"
-    top: "reshape_joint_P1"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
-    }
 }
 
 layer {
@@ -628,25 +454,6 @@ layer {
             dim: -1
             dim: 3
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_P2"
-    type: "Reshape"
-    bottom: "slice_joint_P2"
-    top: "reshape_joint_P2"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
     }
 }
 
@@ -661,25 +468,6 @@ layer {
             dim: 3
         }
     }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_R1"
-    type: "Reshape"
-    bottom: "slice_joint_R1"
-    top: "reshape_joint_R1"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
-    }
 }
 
 layer {
@@ -692,25 +480,6 @@ layer {
             dim: -1
             dim: 3
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_R2"
-    type: "Reshape"
-    bottom: "slice_joint_R2"
-    top: "reshape_joint_R2"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
     }
 }
 
@@ -725,25 +494,6 @@ layer {
             dim: 3
         }
     }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_M1"
-    type: "Reshape"
-    bottom: "slice_joint_M1"
-    top: "reshape_joint_M1"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
-    }
 }
 
 layer {
@@ -756,25 +506,6 @@ layer {
             dim: -1
             dim: 3
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_M2"
-    type: "Reshape"
-    bottom: "slice_joint_M2"
-    top: "reshape_joint_M2"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
     }
 }
 
@@ -789,25 +520,6 @@ layer {
             dim: 3
         }
     }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_I1"
-    type: "Reshape"
-    bottom: "slice_joint_I1"
-    top: "reshape_joint_I1"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
-    }
 }
 
 layer {
@@ -820,25 +532,6 @@ layer {
             dim: -1
             dim: 3
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_I2"
-    type: "Reshape"
-    bottom: "slice_joint_I2"
-    top: "reshape_joint_I2"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
     }
 }
 
@@ -853,25 +546,6 @@ layer {
             dim: 3
         }
     }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_T1"
-    type: "Reshape"
-    bottom: "slice_joint_T1"
-    top: "reshape_joint_T1"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
-    }
 }
 
 layer {
@@ -884,25 +558,6 @@ layer {
             dim: -1
             dim: 3
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_T2"
-    type: "Reshape"
-    bottom: "slice_joint_T2"
-    top: "reshape_joint_T2"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
     }
 }
 
@@ -917,25 +572,6 @@ layer {
             dim: 3
         }
     }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_T3"
-    type: "Reshape"
-    bottom: "slice_joint_T3"
-    top: "reshape_joint_T3"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
-    }
 }
 
 layer {
@@ -948,25 +584,6 @@ layer {
             dim: -1
             dim: 3
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_W1"
-    type: "Reshape"
-    bottom: "slice_joint_W1"
-    top: "reshape_joint_W1"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
     }
 }
 
@@ -981,25 +598,6 @@ layer {
             dim: 3
         }
     }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_W2"
-    type: "Reshape"
-    bottom: "slice_joint_W2"
-    top: "reshape_joint_W2"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
-    }
 }
 
 layer {
@@ -1012,25 +610,6 @@ layer {
             dim: -1
             dim: 3
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape_joint_C"
-    type: "Reshape"
-    bottom: "slice_joint_C"
-    top: "reshape_joint_C"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 3
-        }
-    }
-    include: {
-        phase: TEST
     }
 }
 
@@ -1041,8 +620,8 @@ layer {
     top: "reshape_cm"
     reshape_param {
         shape {
-            dim: -1
-            dim: 3
+            dim: 16
+            dim: 32
         }
     }
     include: {
@@ -1076,7 +655,7 @@ layer {
     	lr_mult: 10
     }
     recurrent_param {
-        num_output: 2048
+        num_output: 1024
         weight_filler {
             type: "uniform"
             min: -0.01
@@ -1086,7 +665,6 @@ layer {
             type: "constant"
             value: 0
         }
-        #debug_info: true
     }
 }
 
@@ -1110,7 +688,7 @@ layer {
     	lr_mult: 10
     }
     recurrent_param {
-        num_output: 2048
+        num_output: 1024
         weight_filler {
             type: "uniform"
             min: -0.01
@@ -1120,7 +698,6 @@ layer {
             type: "constant"
             value: 0
         }
-        #debug_info: true
     }
 }
 
@@ -1144,7 +721,7 @@ layer {
     	lr_mult: 10
     }
     recurrent_param {
-        num_output: 2048
+        num_output: 1024
         weight_filler {
             type: "uniform"
             min: -0.01
@@ -1154,7 +731,6 @@ layer {
             type: "constant"
             value: 0
         }
-        #debug_info: true
     }
 }
 
@@ -1191,9 +767,6 @@ layer {
         }
         axis: 2
     }
-    include: {
-        phase: TRAIN
-    }
 }
 
 layer {
@@ -1219,9 +792,6 @@ layer {
         }
         axis: 2
     }
-    include: {
-        phase: TRAIN
-    }
 }
 
 layer {
@@ -1246,9 +816,6 @@ layer {
             type: "constant"
         }
         axis: 2
-    }
-    include: {
-        phase: TRAIN
     }
 }
 
@@ -1282,14 +849,14 @@ layer {
 	name: "slice_second"
 	type: "Slice"
 	bottom: "reshape_pred_joint_second"
-	top: "pred_P2"
-	top: "pred_R2"
-	top: "pred_M2"
-	top: "pred_I2"
-	top: "pred_T3"
-	top: "pred_T2"
-	top: "pred_W1"
-	top: "pred_W2"
+	top: "pred_P2_res"
+	top: "pred_R2_res"
+	top: "pred_M2_res"
+	top: "pred_I2_res"
+	top: "pred_T3_res"
+	top: "pred_T2_res"
+	top: "pred_W1_res"
+	top: "pred_W2_res"
 	slice_param {
 		axis: 1
 		slice_point: 3
@@ -1306,7 +873,7 @@ layer {
 	name: "pred_P2"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_P2"
+	bottom: "pred_P2_res"
 	top: "pred_P2"
 }
 
@@ -1314,7 +881,7 @@ layer {
 	name: "pred_R2"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_R2"
+	bottom: "pred_R2_res"
 	top: "pred_R2"
 }
 
@@ -1322,7 +889,7 @@ layer {
 	name: "pred_M2"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_M2"
+	bottom: "pred_M2_res"
 	top: "pred_M2"
 }
 
@@ -1330,7 +897,7 @@ layer {
 	name: "pred_I2"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_I2"
+	bottom: "pred_I2_res"
 	top: "pred_I2"
 }
 
@@ -1338,7 +905,7 @@ layer {
 	name: "pred_T3"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_T3"
+	bottom: "pred_T3_res"
 	top: "pred_T3"
 }
 
@@ -1346,7 +913,7 @@ layer {
 	name: "pred_T2"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_T2"
+	bottom: "pred_T2_res"
 	top: "pred_T2"
 }
 
@@ -1354,7 +921,7 @@ layer {
 	name: "pred_W1"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_W1"
+	bottom: "pred_W1_res"
 	top: "pred_W1"
 }
 
@@ -1362,7 +929,7 @@ layer {
 	name: "pred_W2"
 	type: "Eltwise"
 	bottom: "pred_C"
-	bottom: "pred_W2"
+	bottom: "pred_W2_res"
 	top: "pred_W2"
 }
 
@@ -1383,11 +950,11 @@ layer {
 	name: "slice_third"
 	type: "Slice"
 	bottom: "reshape_pred_joint_third"
-	top: "pred_P1"
-	top: "pred_R1"
-	top: "pred_M1"
-	top: "pred_I1"
-	top: "pred_T1"
+	top: "pred_P1_res"
+	top: "pred_R1_res"
+	top: "pred_M1_res"
+	top: "pred_I1_res"
+	top: "pred_T1_res"
 	slice_param {
 		axis: 1
 		slice_point: 3
@@ -1401,7 +968,7 @@ layer {
 	name: "pred_P1"
 	type: "Eltwise"
 	bottom: "pred_P2"
-	bottom: "pred_P1"
+	bottom: "pred_P1_res"
 	top: "pred_P1"
 }
 
@@ -1409,7 +976,7 @@ layer {
 	name: "pred_R1"
 	type: "Eltwise"
 	bottom: "pred_R2"
-	bottom: "pred_R1"
+	bottom: "pred_R1_res"
 	top: "pred_R1"
 }
 
@@ -1417,7 +984,7 @@ layer {
 	name: "pred_M1"
 	type: "Eltwise"
 	bottom: "pred_M2"
-	bottom: "pred_M1"
+	bottom: "pred_M1_res"
 	top: "pred_M1"
 }
 
@@ -1425,7 +992,7 @@ layer {
 	name: "pred_I1"
 	type: "Eltwise"
 	bottom: "pred_I2"
-	bottom: "pred_I1"
+	bottom: "pred_I1_res"
 	top: "pred_I1"
 }
 
@@ -1433,9 +1000,11 @@ layer {
 	name: "pred_T1"
 	type: "Eltwise"
 	bottom: "pred_T2"
-	bottom: "pred_T1"
+	bottom: "pred_T1_res"
 	top: "pred_T1"
 }
+
+# loss
 
 layer {
 	name: "loss_C"
@@ -1564,6 +1133,27 @@ layer {
 }
 
 layer {
+	name: "total_loss"
+    type: "Eltwise"
+    bottom: "loss_P1"
+    bottom: "loss_P2"
+    bottom: "loss_R1"
+    bottom: "loss_R2"
+    bottom: "loss_M1"
+    bottom: "loss_M2"
+    bottom: "loss_I1"
+    bottom: "loss_I2"
+    bottom: "loss_T1"
+    bottom: "loss_T2"
+    bottom: "loss_T3"
+    bottom: "loss_W1"
+    bottom: "loss_W2"
+    bottom: "loss_C"
+    top: "total_loss"
+    loss_weight: 0
+}
+
+layer {
 	name: "pred_joint"
     type: "Concat"
     bottom: "pred_P1"
@@ -1580,6 +1170,7 @@ layer {
     bottom: "pred_W1"
     bottom: "pred_W2"
     bottom: "pred_C"
+    top: "pred_joint"
     concat_param {
     	axis: 1
     }
@@ -1594,9 +1185,28 @@ layer {
 	bottom: "inds"
 	bottom: "com"
 	bottom: "config"
+	bottom: "clip_markers"
 	bottom: "gtorig"
     bottom: "gtcrop"
     bottom: "T"
     bottom: "gt3Dorig"
     bottom: "gt3Dcrop"
+}
+
+layer {
+	name: "ignore"
+	type: "Silence"
+	bottom: "inds"
+	bottom: "com"
+	bottom: "config"
+	bottom: "clip_markers"
+	bottom: "gtorig"
+    bottom: "gtcrop"
+    bottom: "T"
+    bottom: "gt3Dorig"
+    bottom: "gt3Dcrop"
+    bottom: "pred_joint"
+    include: {
+    	phase: TEST
+    }
 }

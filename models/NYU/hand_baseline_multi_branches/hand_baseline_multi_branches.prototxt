@@ -48,488 +48,181 @@ layer {
     }
 }
 
-# conv1
-
 layer {
-	name: "conv1_1"
-	type: "Convolution"
-	bottom: "depth"
-	top: "conv1_1"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 16
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_conv1_1"
-	type: "ReLU"
-	bottom: "conv1_1"
-	top: "conv1_1"
-}
-
-layer {
-	name: "conv1_2"
-	type: "Convolution"
-	bottom: "conv1_1"
-	top: "conv1_2"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 16
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}	
-}
-
-layer {
-	name: "relu_conv1_2"
-	type: "ReLU"
-	bottom: "conv1_2"
-	top: "conv1_2"
-}
-
-layer {
-	name: "pool1"
-	type: "Pooling"
-	bottom: "conv1_2"
-	top: "pool1"
-	pooling_param {
-		pool: MAX
-		kernel_size: 5
-		stride: 3
-	}
-}
-
-# conv2
-
-layer {
-	name: "res2_branch1"
-	type: "Convolution"
-	bottom: "pool1"
-	top: "res2_branch1"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 32
-		kernel_size: 1
-		pad: 0
-		stride: 1
-		bias_term: false
-		weight_filler {
-			type: "xavier"
-		}
-	}
-}
-
-layer {
-	name: "res2_branch2a"
-	type: "Convolution"
-	bottom: "pool1"
-	top: "res2_branch2a"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 32
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_res2_branch2a"
-	type: "ReLU"
-	bottom: "res2_branch2a"
-	top: "res2_branch2a"
-}
-
-layer {
-	name: "res2_branch2b"
-	type: "Convolution"
-	bottom: "res2_branch2a"
-	top: "res2_branch2b"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 32
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "res2"
-	type: "Eltwise"
-	bottom: "res2_branch1"
-	bottom: "res2_branch2b"
-	top: "res2"
-}
-
-layer {
-	name: "relu_res2"
-	type: "ReLU"
-	bottom: "res2"
-	top: "res2"
-}
-
-layer {
-	name: "pool2"
-	type: "Pooling"
-	bottom: "res2"
-	top: "pool2"
-	pooling_param {
-		pool: MAX
-		stride: 2
-		kernel_size: 3
-	}
-}
-
-# conv3
-
-layer {
-	name: "res3_branch1"
-	type: "Convolution"
-	bottom: "pool2"
-	top: "res3_branch1"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 64
-		kernel_size: 1
-		pad: 0
-		stride: 1
-		bias_term: false
-		weight_filler {
-			type: "xavier"
-		}
-	}
-}
-
-layer {
-	name: "res3_branch2a"
-	type: "Convolution"
-	bottom: "pool2"
-	top: "res3_branch2a"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 64
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_res3_branch2a"
-	type: "ReLU"
-	bottom: "res3_branch2a"
-	top: "res3_branch2a"
-}
-
-layer {
-	name: "res3_branch2b"
-	type: "Convolution"
-	bottom: "res3_branch2a"
-	top: "res3_branch2b"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	convolution_param {
-		num_output: 64
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "res3"
-	type: "Eltwise"
-	bottom: "res3_branch1"
-	bottom: "res3_branch2b"
-	top: "res3"
-}
-
-layer {
-	name: "relu_res3"
-	type: "ReLU"
-	bottom: "res3"
-	top: "res3"
-}
-
-layer {
-	name: "pool3"
-	type: "Pooling"
-	bottom: "res3"
-	top: "pool3"
-	pooling_param {
-		pool: MAX
-		stride: 2
-		kernel_size: 3
-	}
-}
-
-layer {
-	name: "fc1_center"
-	type: "InnerProduct"
-	bottom: "pool3"
-	top: "fc1_center"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop1_center"
-    type: "Dropout"
-    bottom: "fc1_center"
-    top: "fc1_center"
-    dropout_param {
-    	dropout_ratio: 0.5
+  name: "convL1"
+  type: "Convolution"
+  bottom: "depth"
+  top: "convL1"
+  convolution_param {
+    num_output: 8
+    kernel_size: 5
+    weight_filler {
+      type: "xavier"
     }
-}
-
-layer {
-	name: "fc1_second"
-	type: "InnerProduct"
-	bottom: "pool3"
-	top: "fc1_second"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mutl: 0
-	}
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop1_second"
-    type: "Dropout"
-    bottom: "fc1_second"
-    top: "fc1_second"
-    dropout_param {
-    	dropout_ratio: 0.5
+    bias_filler {
+      type: "constant"
     }
+  }
 }
 
 layer {
-	name: "fc1_third"
-	type: "InnerProduct"
-	bottom: "pool3"
-	top: "fc1_third"
-	param {
-		lr_mult: 0
-		decay_mult: 0
-	}
-	param {
-		lr_mult: 0
-		decay_mutl: 0
-	}
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
+  name: "ReLUconvL1"
+  type: "ReLU"
+  bottom: "convL1"
+  top: "convL1"
+}
+
+
+layer {
+  name: "poolL1"
+  type: "Pooling"
+  bottom: "convL1"
+  top: "poolL1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 4
+    stride: 4
+  }
 }
 
 layer {
-	name: "drop1_third"
-    type: "Dropout"
-    bottom: "fc1_third"
-    top: "fc1_third"
-    dropout_param {
-    	dropout_ratio: 0.5
+  name: "convL2"
+  type: "Convolution"
+  bottom: "poolL1"
+  top: "convL2"
+  convolution_param {
+    num_output: 8
+    kernel_size: 5
+    weight_filler {
+      type: "xavier"
     }
-}
-
-layer {
-	name: "fc2_center"
-	type: "InnerProduct"
-	bottom: "fc1_center"
-	top: "fc2_center"
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop2_center"
-    type: "Dropout"
-    bottom: "fc2_center"
-    top: "fc2_center"
-    dropout_param {
-    	dropout_ratio: 0.5
+    bias_filler {
+      type: "constant"
     }
+  }
 }
 
 layer {
-	name: "fc2_second"
-	type: "InnerProduct"
-	bottom: "fc1_second"
-	top: "fc2_second"
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
+  name: "ReLUconvL2"
+  type: "ReLU"
+  bottom: "convL2"
+  top: "convL2"
 }
 
 layer {
-	name: "drop2_second"
-    type: "Dropout"
-    bottom: "fc2_second"
-    top: "fc2_second"
-    dropout_param {
-    	dropout_ratio: 0.5
+  name: "poolL2"
+  type: "Pooling"
+  bottom: "convL2"
+  top: "poolL2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+
+
+layer {
+  name: "convL3"
+  type: "Convolution"
+  bottom: "poolL2"
+  top: "convL3"
+  convolution_param {
+    num_output: 8
+    kernel_size: 3
+    weight_filler {
+      type: "xavier"
     }
-}
-
-layer {
-	name: "fc2_third"
-	type: "InnerProduct"
-	bottom: "fc1_third"
-	top: "fc2_third"
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop2_third"
-    type: "Dropout"
-    bottom: "fc2_third"
-    top: "fc2_third"
-    dropout_param {
-    	dropout_ratio: 0.5
+    bias_filler {
+      type: "constant"
     }
+  }
+}
+
+layer {
+  name: "ReLUconvL3"
+  type: "ReLU"
+  bottom: "convL3"
+  top: "convL3"
+}
+
+layer {
+  name: "FC1-center"
+  type: "InnerProduct"
+  bottom: "convL3"
+  top: "FC1-center"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUFC1-center"
+  type: "ReLU"
+  bottom: "FC1-center"
+  top: "FC1-center"
+}
+
+layer {
+  name: "DropoutFC1-center"
+  type: "Dropout"
+  bottom: "FC1-center"
+  top: "FC1-center"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
+}
+
+
+layer {
+  name: "FC2-center"
+  type: "InnerProduct"
+  bottom: "FC1-center"
+  top: "FC2-center"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUFC2-center"
+  type: "ReLU"
+  bottom: "FC2-center"
+  top: "FC2-center"
+}
+
+layer {
+  name: "DropoutFC2-center"
+  type: "Dropout"
+  bottom: "FC2-center"
+  top: "FC2-center"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
 }
 
 layer {
 	name: "pred_joint_center"
 	type: "InnerProduct"
-    bottom: "fc2_center"
+    bottom: "FC2-center"
     top: "pred_joint_center"
     param {
         lr_mult: 1
@@ -547,45 +240,87 @@ layer {
         bias_filler {
             type: "constant"
         }
-        axis: 2
-    }
-    include: {
-        phase: TRAIN
+        axis: 1
     }
 }
 
 layer {
-	name: "pred_joint_center"
-	type: "InnerProduct"
-    bottom: "fc2_center"
-    top: "pred_joint_center"
-    param {
-        lr_mult: 1
-        decay_mult: 1
+  name: "FC1-second"
+  type: "InnerProduct"
+  bottom: "convL3"
+  top: "FC1-second"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
     }
-    param {
-        lr_mult: 2
-        decay_mult: 0
+    bias_filler {
+      type: "constant"
     }
-    inner_product_param {
-        num_output: 3
-        weight_filler {
-            type: "xavier"
-        }
-        bias_filler {
-            type: "constant"
-        }
-        axis: 2
+  }
+}
+
+layer {
+  name: "ReLUFC1-second"
+  type: "ReLU"
+  bottom: "FC1-second"
+  top: "FC1-second"
+}
+
+layer {
+  name: "DropoutFC1-second"
+  type: "Dropout"
+  bottom: "FC1-second"
+  top: "FC1-second"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
+}
+
+
+layer {
+  name: "FC2-second"
+  type: "InnerProduct"
+  bottom: "FC1-second"
+  top: "FC2-second"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
     }
-    include: {
-        phase: TEST
+    bias_filler {
+      type: "constant"
     }
+  }
+}
+
+layer {
+  name: "ReLUFC2-second"
+  type: "ReLU"
+  bottom: "FC2-second"
+  top: "FC2-second"
+}
+
+layer {
+  name: "DropoutFC2-second"
+  type: "Dropout"
+  bottom: "FC2-second"
+  top: "FC2-second"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
 }
 
 layer {
 	name: "pred_joint_second"
 	type: "InnerProduct"
-    bottom: "fc2_second"
+    bottom: "FC2-second"
     top: "pred_joint_second"
     param {
         lr_mult: 1
@@ -603,38 +338,7 @@ layer {
         bias_filler {
             type: "constant"
         }
-        axis: 2
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-	name: "pred_joint_second"
-	type: "InnerProduct"
-    bottom: "fc2_second"
-    top: "pred_joint_second"
-    param {
-        lr_mult: 1
-        decay_mult: 1
-    }
-    param {
-        lr_mult: 2
-        decay_mult: 0
-    }
-    inner_product_param {
-        num_output: 24 # 3 * 8
-        weight_filler {
-            type: "xavier"
-        }
-        bias_filler {
-            type: "constant"
-        }
-        axis: 2
-    }
-    include: {
-        phase: TRAIN
+        axis: 1
     }
 }
 
@@ -663,37 +367,82 @@ layer {
 }
 
 layer {
-	name: "pred_joint_third"
-	type: "InnerProduct"
-    bottom: "fc2_third"
-    top: "pred_joint_third"
-    param {
-        lr_mult: 1
-        decay_mult: 1
+  name: "FC1-third"
+  type: "InnerProduct"
+  bottom: "convL3"
+  top: "FC1-third"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
     }
-    param {
-        lr_mult: 2
-        decay_mult: 0
+    bias_filler {
+      type: "constant"
     }
-    inner_product_param {
-        num_output: 15 # 3 * 5
-        weight_filler {
-            type: "xavier"
-        }
-        bias_filler {
-            type: "constant"
-        }
-        axis: 2
+  }
+}
+
+layer {
+  name: "ReLUFC1-third"
+  type: "ReLU"
+  bottom: "FC1-third"
+  top: "FC1-third"
+}
+
+layer {
+  name: "DropoutFC1-third"
+  type: "Dropout"
+  bottom: "FC1-third"
+  top: "FC1-third"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
+}
+
+
+layer {
+  name: "FC2-third"
+  type: "InnerProduct"
+  bottom: "FC1-third"
+  top: "FC2-third"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
     }
-    include: {
-        phase: TRAIN
+    bias_filler {
+      type: "constant"
     }
+  }
+}
+
+layer {
+  name: "ReLUFC2-third"
+  type: "ReLU"
+  bottom: "FC2-third"
+  top: "FC2-third"
+}
+
+layer {
+  name: "DropoutFC2-third"
+  type: "Dropout"
+  bottom: "FC2-third"
+  top: "FC2-third"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
 }
 
 layer {
 	name: "pred_joint_third"
 	type: "InnerProduct"
-    bottom: "fc2_third"
+    bottom: "FC2-third"
     top: "pred_joint_third"
     param {
         lr_mult: 1
@@ -711,10 +460,7 @@ layer {
         bias_filler {
             type: "constant"
         }
-        axis: 2
-    }
-    include: {
-        phase: TEST
+        axis: 1
     }
 }
 
@@ -899,7 +645,28 @@ layer {
 }
 
 layer {
-	name: "pred_joint"
+	name: "total_loss"
+    type: "Eltwise"
+    bottom: "loss_P1"
+    bottom: "loss_P2"
+    bottom: "loss_R1"
+    bottom: "loss_R2"
+    bottom: "loss_M1"
+    bottom: "loss_M2"
+    bottom: "loss_I1"
+    bottom: "loss_I2"
+    bottom: "loss_T1"
+    bottom: "loss_T2"
+    bottom: "loss_T3"
+    bottom: "loss_W1"
+    bottom: "loss_W2"
+    bottom: "loss_C"
+    top: "total_loss"
+    loss_weight: 0
+}
+
+layer {
+	name: "joint_pred"
     type: "Concat"
     bottom: "pred_P1"
     bottom: "pred_P2"
@@ -914,7 +681,8 @@ layer {
     bottom: "pred_T3"
     bottom: "pred_W1"
     bottom: "pred_W2"
-    bottom: "pred_C"
+    bottom: "pred_joint_center"
+    top: "joint_pred"
     concat_param {
     	axis: 1
     }
@@ -935,4 +703,22 @@ layer {
     bottom: "T"
     bottom: "gt3Dorig"
     bottom: "gt3Dcrop"
+}
+
+layer {
+	name: "ignore"
+	type: "Silence"
+	bottom: "inds"
+	bottom: "com"
+	bottom: "config"
+	bottom: "clip_markers"
+	bottom: "gtorig"
+    bottom: "gtcrop"
+    bottom: "T"
+    bottom: "gt3Dorig"
+    bottom: "gt3Dcrop"
+    bottom: "joint_pred"
+    include: {
+    	phase: TEST
+    }
 }

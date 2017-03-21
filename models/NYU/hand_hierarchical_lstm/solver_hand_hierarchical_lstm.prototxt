@@ -1,7 +1,7 @@
-test_iter: 129
+test_iter: 516
 test_interval: 1000
-net: "models/NYU/hand_baseline_multi_branches/hand_baseline_multi_branches.prototxt"
-base_lr: 1e-3
+net: "models/NYU/hand_hierarchical_lstm/hand_hierarchical_lstm.prototxt"
+base_lr: 1e-4
 momentum: 0.9
 momentum2: 0.999
 lr_policy: "step"
@@ -12,6 +12,6 @@ display: 200
 max_iter: 200000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "weights/NYU/hand_baseline_multi_branches/hand_baseline_multi_branches"
+snapshot_prefix: "weights/NYU/hand_hierarchical_lstm/hand_hierarchical_lstm"
 type: "Adam"
 solver_mode: GPU

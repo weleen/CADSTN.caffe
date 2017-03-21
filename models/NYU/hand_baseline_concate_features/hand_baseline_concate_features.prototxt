@@ -1,4 +1,4 @@
-name: "baseline-deepproir-concate-features"
+name: "baseline-concate-features"
 
 layer {
     name: "data"
@@ -100,7 +100,7 @@ layer {
   }
   convolution_param {
   	num_output: 8
-    kernel_size: 5
+    kernel_size: 4
     stride: 4
     weight_filler {
       type: "xavier"
@@ -116,6 +116,17 @@ layer {
   type: "ReLU"
   bottom: "convL1_downsample"
   top: "convL1_downsample"
+}
+
+layer {
+  name: "poolL1_concate"
+  type: "Concat"
+  bottom: "poolL1"
+  bottom: "convL1_downsample"
+  top: "poolL1_concate"
+  concat_param {
+  	axis: 1
+  }
 }
 
 layer {
@@ -155,45 +166,10 @@ layer {
 }
 
 layer {
-  name: "convL2_concate"
-  type: "Concat"
-  bottom: "convL2"
-  bottom: "convL1_downsample"
-  top: "convL2_concate"
-  concat_param {
-  	axis: 1
-  }
-}
-
-layer {
-  name: "convL3"
+  name: "poolL1_downsample"
   type: "Convolution"
-  bottom: "poolL2"
-  top: "convL3"
-  convolution_param {
-    num_output: 8
-    kernel_size: 3
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-    }
-  }
-}
-
-layer {
-  name: "ReLUconvL3"
-  type: "ReLU"
-  bottom: "convL3"
-  top: "convL3"
-}
-
-layer {
-  name: "convL2_downsample"
-  type: "Convolution"
-  bottom: "convL2_concate"
-  top: "convL2_downsample"
+  bottom: "poolL1_concate"
+  top: "poolL1_downsample"
   param {
   	lr_mult: 1
     decay_mult: 1
@@ -216,26 +192,50 @@ layer {
 }
 
 layer {
-  name: "relu_convL2_downsample"
+  name: "relu_poolL1_downsample"
   type: "ReLU"
-  bottom: "convL2_downsample"
-  top: "convL2_downsample"
+  bottom: "poolL1_downsample"
+  top: "poolL1_downsample"
 }
 
 layer {
-  name: "convL3_concate"
+  name: "poolL2_concate"
   type: "Concat"
-  bottom: "convL3"
-  bottom: "convL2_downsample"
-  top: "convL3_concate"
+  bottom: "poolL2"
+  bottom: "poolL1_downsample"
+  top: "poolL2_concate"
   concat_param {
   	axis: 1
   }
 }
 layer {
+  name: "convL3"
+  type: "Convolution"
+  bottom: "poolL2_concate"
+  top: "convL3"
+  convolution_param {
+    num_output: 8
+    kernel_size: 3
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "ReLUconvL3"
+  type: "ReLU"
+  bottom: "convL3"
+  top: "convL3"
+}
+
+layer {
   name: "FC1"
   type: "InnerProduct"
-  bottom: "convL3_concate"
+  bottom: "convL3"
   top: "FC1"
   param {
     lr_mult: 1

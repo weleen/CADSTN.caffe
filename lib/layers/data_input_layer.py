@@ -15,14 +15,14 @@ DEBUG = False
 
 class DataRead(object):
     """Read the data"""
-    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3, dsize=(96, 96)):
+    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3, dsize=(128, 128)):
         """
         :param dataPath:
         :param name:
         """
         self.name = name
         self.phase = phase
-        self.cachePath = path + str(dsize[0]) + '/'
+        self.cachePath = path
         self.clip_length = clip_length # how many frames each sequence
         self.data = {}
         self.dim = dim
@@ -38,11 +38,6 @@ class DataRead(object):
         dpt, gt3D = Dataset.imgStackDepthOnly(sequence.name)
 
         dataset = {}
-        gtorig = []
-        gtcrop = []
-        T = []
-        gt3Dorig = []
-        gt3Dcrop = []
         com = []
         fileName = []
 
@@ -50,11 +45,6 @@ class DataRead(object):
         print('size of {} {} dataset is {}'.format(self.name, sequence.name, size))
         for i in xrange(len(sequence.data)):
             data = sequence.data[i]
-            gtorig.append(data.gtorig)
-            gtcrop.append(data.gtcrop)
-            T.append(data.T)
-            gt3Dorig.append(data.gt3Dorig)
-            gt3Dcrop.append(data.gt3Dcrop)
             com.append(data.com)
             if self.name == 'NYU':
                 fileName.append(int(data.fileName[-11:-4]))
@@ -63,15 +53,12 @@ class DataRead(object):
                     (data.fileName.find('.png'))]) + size_before)
 
         dataset['depth'] = np.asarray(dpt)
-        dataset['gtorig'] = np.asarray(gtorig)
-        dataset['gtcrop'] = np.asarray(gtcrop)
-        dataset['T'] = np.asarray(T)
-        dataset['gt3Dorig'] = np.asarray(gt3Dorig)
-        dataset['gt3Dcrop'] = np.asarray(gt3Dcrop)
         dataset['com'] = np.asarray(com)
         dataset['inds'] = np.asarray(fileName)
         dataset['config'] = np.asarray(config['cube']).reshape(1, self.dim).repeat(size, axis=0)
         dataset['joint'] = np.asarray(gt3D)
+
+        #print "dataset['joint'].shape = {}".format(dataset['joint'].shape) (N, 14 or 16, 3)
 
         return dataset
 
@@ -84,7 +71,7 @@ class DataRead(object):
         if self.name == 'NYU':
             di = NYUImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
             if self.phase == 'train':
-                sequence = di.loadSequence('train', flip=True, rotation=True, dsize=self.dsize)  # train sequence
+                sequence = di.loadSequence('train', flip=True, rotation=True, domcom=True, dsize=self.dsize)  # train sequence
                 self.data = self.convert(sequence)
             elif self.phase == 'test':
                 sequence1 = di.loadSequence('test_1', dsize=self.dsize)  # test sequence 1
@@ -93,11 +80,6 @@ class DataRead(object):
                 data_2 = self.convert(sequence2)
 
                 self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
-                self.data['gtorig'] = np.concatenate([data_1['gtorig'], data_2['gtorig']])
-                self.data['gtcrop'] = np.concatenate([data_1['gtcrop'], data_2['gtcrop']])
-                self.data['T'] = np.concatenate([data_1['T'], data_2['T']])
-                self.data['gt3Dorig'] = np.concatenate([data_1['gt3Dorig'], data_2['gt3Dorig']])
-                self.data['gt3Dcrop'] = np.concatenate([data_1['gt3Dcrop'], data_2['gt3Dcrop']])
                 self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
                 self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
                 self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
@@ -106,7 +88,7 @@ class DataRead(object):
         elif self.name == 'ICVL':
             di = ICVLImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
             if self.phase == 'train':
-                sequence = di.loadSequence('train', dsize=self.dsize)  # use dataset totally
+                sequence = di.loadSequence('train', docom=True, dsize=self.dsize)  # use dataset totally
                 self.data = self.convert(sequence)
             elif self.phase == 'test':
                 sequence1 = di.loadSequence('test_seq_1', dsize=self.dsize)  # test sequence 1
@@ -116,11 +98,6 @@ class DataRead(object):
                 data_2 = self.convert(sequence2, size_before=size_1) # concate two test sequence together
 
                 self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
-                self.data['gtorig'] = np.concatenate([data_1['gtorig'], data_2['gtorig']])
-                self.data['gtcrop'] = np.concatenate([data_1['gtcrop'], data_2['gtcrop']])
-                self.data['T'] = np.concatenate([data_1['T'], data_2['T']])
-                self.data['gt3Dorig'] = np.concatenate([data_1['gt3Dorig'], data_2['gt3Dorig']])
-                self.data['gt3Dcrop'] = np.concatenate([data_1['gt3Dcrop'], data_2['gt3Dcrop']])
                 self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
                 self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
                 self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
@@ -148,11 +125,6 @@ class DataRead(object):
                     tmp = current_seq[-1]
                 else:
                     tmp = {'depth': self.data['depth'][ind],
-                           'gtorig': self.data['gtorig'][ind],
-                           'gtcrop': self.data['gtcrop'][ind],
-                           'T': self.data['T'][ind],
-                           'gt3Dorig': self.data['gt3Dorig'][ind],
-                           'gt3Dcrop': self.data['gt3Dcrop'][ind],
                            'com': self.data['com'][ind],
                            'inds': self.data['inds'][ind],
                            'joint': self.data['joint'][ind],
@@ -229,8 +201,7 @@ class videoRead(caffe.Layer):
         self.sequence_generator = sequenceGenerator(self.buffer_size, self.frames,\
                                                    len(self.seq_dict), self.seq_dict)
 
-        self.top_names = ['depth', 'gtorig', 'gtcrop', 'T', 'gt3Dorig',
-                          'gt3Dcrop', 'joint', 'clip_markers', 'com', 'config', 'inds']
+        self.top_names = ['depth', 'joint', 'clip_markers', 'com', 'config', 'inds', 'clip_markers2']
         print 'Outputs: ', self.top_names
         if len(top) != len(self.top_names):
             raise Exception('Incorrect number of outputs (expect %d, got %d)'\
@@ -245,16 +216,6 @@ class videoRead(caffe.Layer):
         for top_index, name in enumerate(self.top_names):
             if name == 'depth':
                 shape = (self.N, 1, self.imagesize, self.imagesize)
-            elif name == 'gtorig':
-                shape = (self.N, self.joints, self.dim)
-            elif name == 'gtcrop':
-                shape = (self.N, self.joints, self.dim)
-            elif name == 'T':
-                shape = (self.N, 3 * 3)
-            elif name == 'gt3Dorig':
-                shape = (self.N, self.joints, self.dim)
-            elif name == 'gt3Dcrop':
-                shape = (self.N, self.joints, self.dim)
             elif name == 'joint':
                 shape = (self.N, self.joints, self.dim)
             elif name == 'clip_markers':
@@ -265,6 +226,8 @@ class videoRead(caffe.Layer):
                 shape = (self.N, self.dim)
             elif name == 'inds':
                 shape = (self.N, )
+            elif name == 'clip_markers2':
+                shape = (3, self.N)
             top[top_index].reshape(*shape)
 
     def reshape(self, bottom, top):
@@ -274,66 +237,41 @@ class videoRead(caffe.Layer):
         data = self.sequence_generator()
 
         depth = np.zeros((self.N, 1, self.imagesize, self.imagesize))
-        gtorig = np.zeros((self.N, self.joints, self.dim))
-        gtcrop = np.zeros((self.N, self.joints, self.dim))
-        T = np.zeros((self.N, 3 * 3))
-        gt3Dorig = np.zeros((self.N, self.joints, self.dim))
-        gt3Dcrop = np.zeros((self.N, self.joints, self.dim))
         joint = np.zeros((self.N, self.joints, self.dim))
         cm = np.zeros((self.N, ))
         com = np.zeros((self.N, self.dim))
         config = np.zeros((self.N, self.dim))
         inds = np.zeros((self.N))
+        cm2 = np.zeros((3, self.N))
 
         # rearrange the dataset for LSTM
         for i in xrange(self.frames):
             for j in xrange(self.buffer_size):
                 idx = i*self.buffer_size + j
                 depth[idx] = data[j][i]['depth']
-                gtorig[idx] = data[j][i]['gtorig']
-                gtcrop[idx] = data[j][i]['gtcrop']
-                T[idx] = data[j][i]['T'].reshape(3*3)
-                gt3Dorig[idx] = data[j][i]['gt3Dorig']
-                gt3Dcrop[idx] = data[j][i]['gt3Dcrop']
                 joint[idx] = data[j][i]['joint']
                 cm[idx] = data[j][i]['clip_markers']
                 com[idx] = data[j][i]['com']
                 config[idx] = data[j][i]['config']
                 inds[idx] = data[j][i]['inds']
 
+        # generate clip_markers2
+        cm2[1:3][:] = 1
+
         if DEBUG:
             print "top shape:"
             print "top[depth] shape = {}, copy from {}".format(top[0].shape, depth.shape)
-            print "top[gtorig] shape = {}, copy from {}".format(top[1].shape, gtorig.shape)
-            print "top[gtcrop] shape = {}, copy from {}".format(top[2].shape, gtcrop.shape)
-            print "top[T] shape = {}, copy from {}".format(top[3].shape, T.shape)
-            print "top[gt3Dorig] shape = {}, copy from {}".format(top[4].shape, gt3Dorig.shape)
-            print "top[gt3Dcrop] shape = {}, copy from {}".format(top[5].shape, gt3Dcrop.shape)
-            print "top[joint] shape = {}, copy from {}".format(top[6].shape, joint.shape)
-            print "top[clip_markers] shape = {}, copy from {}".format(top[7].shape, cm.shape)
-            print "top[com] shape = {}, copy from {}".format(top[8].shape, com.shape)
-            print "top[config] shape = {}, copy from {}".format(top[9].shape, config.shape)
-            print "top[inds] shape = {}, copy from {}".format(top[10].shape, inds.shape)
+            print "top[joint] shape = {}, copy from {}".format(top[1].shape, joint.shape)
+            print "top[clip_markers] shape = {}, copy from {}".format(top[2].shape, cm.shape)
+            print "top[com] shape = {}, copy from {}".format(top[3].shape, com.shape)
+            print "top[config] shape = {}, copy from {}".format(top[4].shape, config.shape)
+            print "top[inds] shape = {}, copy from {}".format(top[5].shape, inds.shape)
+            print "top[clip_markers2] shape = {}, copy from {}".format(top[7].shape, cm2.shape)
 
         for top_index, name in zip(range(len(top)), self.top_names):
             if name == 'depth':
                 for i in range(self.N):
                     top[top_index].data[i, ...] = depth[i]
-            elif name == 'gtorig':
-                for i in range(self.N):
-                    top[top_index].data[i, ...] = gtorig[i]
-            elif name == 'gtcrop':
-                for i in range(self.N):
-                    top[top_index].data[i, ...] = gtcrop[i]
-            elif name == 'T':
-                for i in range(self.N):
-                    top[top_index].data[i, ...] = T[i]
-            elif name == 'gt3Dorig':
-                for i in range(self.N):
-                    top[top_index].data[i, ...] = gt3Dorig[i]
-            elif name == 'gt3Dcrop':
-                for i in range(self.N):
-                    top[top_index].data[i, ...] = gt3Dcrop[i]
             elif name == 'joint':
                 for i in range(self.N):
                     top[top_index].data[i, ...] = joint[i]
@@ -347,6 +285,8 @@ class videoRead(caffe.Layer):
                     top[top_index].data[i, ...] = config[i]
             elif name == 'inds':
                 top[top_index].data[...] = inds
+            elif name == 'clip_markers2':
+                top[top_index].data[...] = cm2
 
     def backward(self):
         pass
@@ -394,21 +334,11 @@ class ICVLTestSeq(videoRead):
 
 
 if __name__ == '__main__':
-    #data = DataRead(name='NYU', phase='train',dsize=(128, 128))
-    #data_load = data.loadData()
-    #data = DataRead(name='NYU', phase='test', dsize=(128, 128))
-    #data_load = data.loadData()
-    #data = DataRead(name='ICVL', phase='train',dsize=(128, 128))
-    #data_load = data.loadData()
-    #data = DataRead(name='ICVL', phase='test', dsize=(128, 128))
-    #data_load = data.loadData()
-    
-    #data = DataRead(name='NYU', phase='train',dsize=(96, 96))
-    #data_load = data.loadData()
-    #data = DataRead(name='NYU', phase='test', dsize=(96, 96))
-    #data_load = data.loadData()
-    #data = DataRead(name='ICVL', phase='train',dsize=(96, 96))
-    #data_load = data.loadData()
-    #data = DataRead(name='ICVL', phase='test', dsize=(96, 96))
-    #data_load = data.loadData()
-    pass
+    data = DataRead(name='NYU', phase='train',dsize=(128, 128))
+    data_load = data.loadData()
+    data = DataRead(name='NYU', phase='test', dsize=(128, 128))
+    data_load = data.loadData()
+    data = DataRead(name='ICVL', phase='train',dsize=(128, 128))
+    data_load = data.loadData()
+    data = DataRead(name='ICVL', phase='test', dsize=(128, 128))
+    data_load = data.loadData()

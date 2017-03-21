@@ -1,4 +1,4 @@
-name: "hand-lstm-no-concate"
+name: "baseline"
 
 layer {
     name: "data"
@@ -13,7 +13,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTrainSeq"
-        param_str: '{"buffer_size": "32", "frame_size": "16", "shuffle": "true", "size": "128"}'
+        param_str: '{"buffer_size": "512", "frame_size": "1", "shuffle": "true", "size": "128"}'
     }
     include: {
         phase: TRAIN
@@ -33,7 +33,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTestSeq"
-        param_str: '{"buffer_size": "1", "frame_size": "16", "shuffle": "true", "size": "128"}'
+        param_str: '{"buffer_size": "64", "frame_size": "1", "shuffle": "true", "size": "128"}'
     }
     include: {
         phase: TEST
@@ -45,14 +45,6 @@ layer {
   type: "Convolution"
   bottom: "depth"
   top: "convL1"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
   convolution_param {
     num_output: 8
     kernel_size: 5
@@ -90,14 +82,6 @@ layer {
   type: "Convolution"
   bottom: "poolL1"
   top: "convL2"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
   convolution_param {
     num_output: 8
     kernel_size: 5
@@ -135,14 +119,6 @@ layer {
   type: "Convolution"
   bottom: "poolL2"
   top: "convL3"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
   convolution_param {
     num_output: 8
     kernel_size: 3
@@ -168,12 +144,7 @@ layer {
   bottom: "convL3"
   top: "FC1"
   param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
+    lr_mult: 1
   }
   inner_product_param {
     num_output: 1024
@@ -203,124 +174,70 @@ layer {
   }
 }
 
+
 layer {
-    name: "reshape-data"
-    type: "Reshape"
-    bottom: "FC1"
-    top: "reshape-data"
-    reshape_param {
-        shape {
-            dim: 16
-            dim: -1
-            dim: 1024
-        }
+  name: "FC2"
+  type: "InnerProduct"
+  bottom: "FC1"
+  top: "FC2"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
     }
+    bias_filler {
+      type: "constant"
+    }
+  }
 }
 
 layer {
-    name: "reshape-joint"
-    type: "Reshape"
-    bottom: "joint"
-    top: "reshape-joint"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 42
-        }
-    }
+  name: "ReLUFC2"
+  type: "ReLU"
+  bottom: "FC2"
+  top: "FC2"
 }
 
 layer {
-    name: "reshape-cm"
-    type: "Reshape"
-    bottom: "clip_markers"
-    top: "reshape-cm"
-    reshape_param {
-        shape {
-            dim: 16
-            dim: -1
-        }
-    }
+  name: "DropoutFC2"
+  type: "Dropout"
+  bottom: "FC2"
+  top: "FC2"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
 }
 
 layer {
-    name: "lstm"
-    type: "LSTM"
-    bottom: "reshape-data"
-    bottom: "reshape-cm"
-    top: "lstm"
-    param {
-    	lr_mult: 10
+  name: "joint_pred"
+  type: "InnerProduct"
+  bottom: "FC2"
+  top: "joint_pred"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 42
+    weight_filler {
+      type: "gaussian"
+      std: 0.001
     }
-    recurrent_param {
-        num_output: 1024
-        weight_filler {
-            type: "uniform"
-            min: -0.01
-            max: 0.01
-        }
-        bias_filler {
-            type: "constant"
-            value: 0
-        }
-        #debug_info: true
+    bias_filler {
+      type: "constant"
     }
+  }
 }
 
 layer {
-    name: "lstm-drop"
-    type: "Dropout"
-    bottom: "lstm"
-    top: "lstm"
-    dropout_param {
-        dropout_ratio: 0.5
-    }
-}
-
-layer {
-    name: "pred_joint"
-    type: "InnerProduct"
-    bottom: "lstm"
-    top: "pred_joint"
-    param {
-        lr_mult: 1
-        decay_mult: 1
-    }
-    param {
-        lr_mult: 2
-        decay_mult: 0
-    }
-    inner_product_param {
-        num_output: 42
-        weight_filler {
-            type: "xavier"
-        }
-        bias_filler {
-            type: "constant"
-        }
-        axis: 2
-    }
-}
-
-layer {
-	name: "reshape_pred_joint"
-    type: "Reshape"
-    bottom: "pred_joint"
-    top: "reshape_pred_joint"
-    reshape_param {
-    	shape {
-        	dim: -1
-            dim: 42
-        }
-    }
-}
-
-layer {
-    name: "loss"
-    type: "EuclideanLoss"
-    bottom: "reshape_pred_joint"
-    bottom: "reshape-joint"
-    top: "loss"
+	name: "loss"
+	type: "EuclideanLoss"
+	bottom: "joint_pred"
+	bottom: "joint"
+	top: "loss"
+	loss_weight: 1
 }
 
 layer {
@@ -329,5 +246,6 @@ layer {
 	bottom: "inds"
 	bottom: "com"
 	bottom: "config"
-    bottom: "clip_markers2"
+	bottom: "clip_markers"
+  bottom: "clip_markers2"
 }

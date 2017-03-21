@@ -1,19 +1,15 @@
-name: "hand-deepprior-lstm-no-concate"
+name: "hand-lstm-refine"
 
 layer {
     name: "data"
     type: "Python"
     top: "depth"
-    top: "gtorig"
-    top: "gtcrop"
-    top: "T"
-    top: "gt3Dorig"
-    top: "gt3Dcrop"
     top: "joint"
     top: "clip_markers"
     top: "com"
     top: "config"
     top: "inds"
+    top: "clip_markers2"
     python_param {
         module: "data_input_layer"
         layer: "NYUTrainSeq"
@@ -28,16 +24,12 @@ layer {
     name: "data"
     type: "Python"
     top: "depth"
-    top: "gtorig"
-    top: "gtcrop"
-    top: "T"
-    top: "gt3Dorig"
-    top: "gt3Dcrop"
     top: "joint"
     top: "clip_markers"
     top: "com"
     top: "config"
     top: "inds"
+    top: "clip_markers2"
     python_param {
         module: "data_input_layer"
         layer: "NYUTestSeq"
@@ -53,6 +45,14 @@ layer {
   type: "Convolution"
   bottom: "depth"
   top: "convL1"
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
   convolution_param {
     num_output: 8
     kernel_size: 5
@@ -90,6 +90,14 @@ layer {
   type: "Convolution"
   bottom: "poolL1"
   top: "convL2"
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
   convolution_param {
     num_output: 8
     kernel_size: 5
@@ -127,6 +135,14 @@ layer {
   type: "Convolution"
   bottom: "poolL2"
   top: "convL3"
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+  	lr_mult: 0
+    decay_mult: 0
+  }
   convolution_param {
     num_output: 8
     kernel_size: 3
@@ -152,7 +168,12 @@ layer {
   bottom: "convL3"
   top: "FC1"
   param {
-    lr_mult: 1
+  	lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+  	lr_mult: 0
+    decay_mult: 0
   }
   inner_product_param {
     num_output: 1024
@@ -190,30 +211,9 @@ layer {
     reshape_param {
         shape {
             dim: 16
-            dim: 32
-            dim: 2048
+            dim: -1
+            dim: 1024
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape-data"
-    type: "Reshape"
-    bottom: "FC1"
-    top: "reshape-data"
-    reshape_param {
-        shape {
-            dim: 16
-            dim: 1
-            dim: 2048
-        }
-    }
-    include: {
-        phase: TEST
-        #stage: "test-on-test"
     }
 }
 
@@ -224,31 +224,9 @@ layer {
     top: "reshape-joint"
     reshape_param {
         shape {
-            dim: 16
-            dim: 32
+            dim: -1
             dim: 42
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape-joint"
-    type: "Reshape"
-    bottom: "joint"
-    top: "reshape-joint"
-    reshape_param {
-        shape {
-            dim: 16
-            dim: 1
-            dim: 42
-        }
-    }
-    include: {
-        phase: TEST
-        #stage: "test-on-test"
     }
 }
 
@@ -260,28 +238,8 @@ layer {
     reshape_param {
         shape {
             dim: 16
-            dim: 32
+            dim: -1
         }
-    }
-    include: {
-        phase: TRAIN
-    }
-}
-
-layer {
-    name: "reshape-cm"
-    type: "Reshape"
-    bottom: "clip_markers"
-    top: "reshape-cm"
-    reshape_param {
-        shape {
-            dim: 16
-            dim: 1
-        }
-    }
-    include: {
-        phase: TEST
-        #stage: "test-on-test"
     }
 }
 
@@ -319,46 +277,28 @@ layer {
     }
 }
 
-
 layer {
-    name: "pred_joint"
-    type: "InnerProduct"
+    name: "concat-feature"
+    type: "Concat"
     bottom: "lstm"
-    top: "pred_joint"
-    param {
-        lr_mult: 1
-        decay_mult: 1
-    }
-    param {
-        lr_mult: 2
-        decay_mult: 0
-    }
-    inner_product_param {
-        num_output: 42
-        weight_filler {
-            type: "xavier"
-        }
-        bias_filler {
-            type: "constant"
-        }
+    bottom: "reshape-data"
+    top: "concat-feature"
+    concat_param {
         axis: 2
-    }
-    include: {
-        phase: TRAIN
     }
 }
 
 layer {
     name: "pred_joint"
     type: "InnerProduct"
-    bottom: "lstm"
+    bottom: "concat-feature"
     top: "pred_joint"
     param {
-        lr_mult: 10
+    	lr_mult: 1
         decay_mult: 1
     }
     param {
-        lr_mult: 20
+    	lr_mult: 2
         decay_mult: 0
     }
     inner_product_param {
@@ -371,18 +311,42 @@ layer {
         }
         axis: 2
     }
-    include: {
-        phase: TEST
-        #stage: "test-on-test"
+}
+
+layer {
+	name: "reshape_pred_joint"
+    type: "Reshape"
+    bottom: "pred_joint"
+    top: "reshape_pred_joint"
+    reshape_param {
+    	shape {
+        	dim: -1
+            dim: 42
+        }
     }
+}
+
+layer {
+	name: "relative_loss"
+    type: "Python"
+    bottom: "reshape_pred_joint"
+    bottom: "reshape-joint"
+    top: "relative_loss"
+    python_param {
+    	module: "relative_loss_layer"
+        layer: "RelativeLossLayer"
+        param_str: '{"joint_num": "14"}'
+    }
+    loss_weight: 1
 }
 
 layer {
     name: "loss"
     type: "EuclideanLoss"
-    bottom: "pred_joint"
+    bottom: "reshape_pred_joint"
     bottom: "reshape-joint"
     top: "loss"
+    loss_weight: 1
 }
 
 layer {
@@ -391,9 +355,5 @@ layer {
 	bottom: "inds"
 	bottom: "com"
 	bottom: "config"
-	bottom: "gtorig"
-    bottom: "gtcrop"
-    bottom: "T"
-    bottom: "gt3Dorig"
-    bottom: "gt3Dcrop"
+    bottom: "clip_markers2"
 }

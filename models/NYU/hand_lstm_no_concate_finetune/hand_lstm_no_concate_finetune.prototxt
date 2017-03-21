@@ -1,4 +1,4 @@
-name: "hand-bidirectional-lstm"
+name: "hand-lstm-no-concate-finetune"
 
 layer {
     name: "data"
@@ -45,14 +45,6 @@ layer {
   type: "Convolution"
   bottom: "depth"
   top: "convL1"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
   convolution_param {
     num_output: 8
     kernel_size: 5
@@ -90,14 +82,6 @@ layer {
   type: "Convolution"
   bottom: "poolL1"
   top: "convL2"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
   convolution_param {
     num_output: 8
     kernel_size: 5
@@ -135,14 +119,6 @@ layer {
   type: "Convolution"
   bottom: "poolL2"
   top: "convL3"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
   convolution_param {
     num_output: 8
     kernel_size: 3
@@ -167,14 +143,6 @@ layer {
   type: "InnerProduct"
   bottom: "convL3"
   top: "FC1"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
   inner_product_param {
     num_output: 1024
     weight_filler {
@@ -266,7 +234,6 @@ layer {
     }
     include: {
         phase: TEST
-        #stage: "test-on-test"
     }
 }
 
@@ -303,113 +270,13 @@ layer {
 }
 
 layer {
-    name: "lstm1"
+    name: "lstm"
     type: "LSTM"
     bottom: "reshape-data"
     bottom: "reshape-cm"
-    top: "lstm1"
+    top: "lstm"
     param {
-      lr_mult: 10
-    }
-    recurrent_param {
-        num_output: 1024
-        weight_filler {
-            type: "uniform"
-            min: -0.01
-            max: 0.01
-        }
-        bias_filler {
-            type: "constant"
-            value: 0
-        }
-        #debug_info: true
-    }
-}
-
-layer {
-    name: "lstm1-drop"
-    type: "Dropout"
-    bottom: "lstm1"
-    top: "lstm1"
-    dropout_param {
-        dropout_ratio: 0.5
-    }
-}
-
-layer {
-	name: "slice_data"
-    type: "Slice"
-    bottom: "reshape-data"
-    top: "data0"
-    top: "data1"
-    top: "data2"
-    top: "data3"
-    top: "data4"
-    top: "data5"
-    top: "data6"
-    top: "data7"
-    top: "data8"
-    top: "data9"
-    top: "data10"
-    top: "data11"
-    top: "data12"
-    top: "data13"
-    top: "data14"
-    top: "data15"
-    slice_param {
-    	axis: 0
-        slice_point: 1
-        slice_point: 2
-        slice_point: 3
-        slice_point: 4
-        slice_point: 5
-        slice_point: 6
-        slice_point: 7
-        slice_point: 8
-        slice_point: 9
-        slice_point: 10
-        slice_point: 11
-        slice_point: 12
-        slice_point: 13
-        slice_point: 14
-        slice_point: 15
-    }
-}
-
-layer {
-	name: "flip-data"
-    type: "Concat"
-    bottom: "data15"
-    bottom: "data14"
-    bottom: "data13"
-    bottom: "data12"
-    bottom: "data11"
-    bottom: "data10"
-    bottom: "data9"
-    bottom: "data8"
-    bottom: "data7"
-    bottom: "data6"
-    bottom: "data5"
-    bottom: "data4"
-    bottom: "data3"
-    bottom: "data2"
-    bottom: "data1"
-    bottom: "data0"
-    top: "flip-data"
-    concat_param {
-    	axis: 0
-    }
-}
-
-
-layer {
-    name: "lstm2"
-    type: "LSTM"
-    bottom: "flip-data"
-    bottom: "reshape-cm"
-    top: "lstm2"
-    param {
-      lr_mult: 10
+    	lr_mult: 10
     }
     recurrent_param {
         num_output: 1024
@@ -426,31 +293,20 @@ layer {
 }
 
 layer {
-    name: "lstm2-drop"
+    name: "lstm-drop"
     type: "Dropout"
-    bottom: "lstm2"
-    top: "lstm2"
+    bottom: "lstm"
+    top: "lstm"
     dropout_param {
         dropout_ratio: 0.5
     }
 }
 
-layer {
-    name: "concat-feature"
-    type: "Concat"
-    bottom: "lstm1"
-    bottom: "lstm2"
-    bottom: "reshape-data"
-    top: "concat-feature"
-    concat_param {
-        axis: 2
-    }
-}
 
 layer {
     name: "pred_joint"
     type: "InnerProduct"
-    bottom: "concat-feature"
+    bottom: "lstm"
     top: "pred_joint"
     param {
         lr_mult: 1
@@ -478,14 +334,14 @@ layer {
 layer {
     name: "pred_joint"
     type: "InnerProduct"
-    bottom: "concat-feature"
+    bottom: "lstm"
     top: "pred_joint"
     param {
-        lr_mult: 1
+        lr_mult: 10
         decay_mult: 1
     }
     param {
-        lr_mult: 2
+        lr_mult: 20
         decay_mult: 0
     }
     inner_product_param {
@@ -522,6 +378,7 @@ layer {
     bottom: "reshape_pred_joint"
     bottom: "reshape-joint"
     top: "loss"
+    loss_weight: 1
 }
 
 layer {

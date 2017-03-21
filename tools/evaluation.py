@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import os
 import time
 import scipy.io as scio
-from data_layer.data_input_layer import *
+from layers.data_input_layer import *
 from data.transformations import transformPoint2D
 from util.handpose_evaluation import NYUHandposeEvaluation
 from data.importers import NYUImporter
@@ -173,17 +173,13 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model.append(('baseline','150000')) # 20.9392899563mm
-    model.append(('baseline_concate_features', '200000'))
-    model.append(('baseline_msra', '300000'))
-    #model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
-    model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
-    #model.append(('lstm_small_frame_size','200000')) # 20 22.7196790917mm
-    #model.append(('lstm_small_frame_size_no_concate','200000')) # 20 20.9209744816mm
+    model.append(('baseline','200000')) # 20.9392899563mm
+    #model.append(('baseline_concate_features', '200000'))
+    #model.append(('baseline_msra', '300000'))
+    model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
+    #model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
     #model.append(('bidirectional_lstm','190000'))
     #model.append(('bidirectional_lstm_no_concate', '200000'))
-    #model.append(('bidirectional_lstm_small_frame_size', '200000'))  # 18 21.5291765649mm 20 21.5307424041mm
-    #model.append(('bidirectional_lstm_small_frame_size_no_concate', '200000'))
     for ind in xrange(len(model)):
         joints, file_name= predictJoints(model[ind])
 
