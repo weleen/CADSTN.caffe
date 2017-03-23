@@ -15,18 +15,23 @@ DEBUG = False
 
 class DataRead(object):
     """Read the data"""
-    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3, dsize=(128, 128)):
+    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3, dsize=(128, 128), baseline=True):
         """
         :param dataPath:
         :param name:
         """
         self.name = name
         self.phase = phase
-        self.cachePath = path
+	self.baseline = baseline
+	if baseline == True: # if train baseline use augmented folder
+            self.cachePath = path + '_augment'
+	else: # if not baseline, use original folder
+	    self.cachePath = path
         self.clip_length = clip_length # how many frames each sequence
         self.data = {}
         self.dim = dim
         self.dsize = dsize
+        self.rng = np.random.RandomState(23455)
 
     def convert(self, sequence, size_before=None):
         """convert sequence data"""
@@ -71,11 +76,14 @@ class DataRead(object):
         if self.name == 'NYU':
             di = NYUImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
             if self.phase == 'train':
-                sequence = di.loadSequence('train', flip=True, rotation=True, domcom=True, dsize=self.dsize)  # train sequence
+		if self.baseline:
+                    sequence = di.loadSequence('train', shuffle=True, rng=self.rng, flip=True, rotation=True, docom=True, dsize=self.dsize)  # train sequence
+		else:
+		    sequence = di.loadSequence('train', docom=True, dsize=self.dsize)
                 self.data = self.convert(sequence)
             elif self.phase == 'test':
-                sequence1 = di.loadSequence('test_1', dsize=self.dsize)  # test sequence 1
-                sequence2 = di.loadSequence('test_2', dsize=self.dsize)  # test sequence 2
+                sequence1 = di.loadSequence('test_1', docom=True, dsize=self.dsize)  # test sequence 1
+                sequence2 = di.loadSequence('test_2', docom=True, dsize=self.dsize)  # test sequence 2
                 data_1 = self.convert(sequence1)
                 data_2 = self.convert(sequence2)
 
@@ -88,11 +96,14 @@ class DataRead(object):
         elif self.name == 'ICVL':
             di = ICVLImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
             if self.phase == 'train':
-                sequence = di.loadSequence('train', docom=True, dsize=self.dsize)  # use dataset totally
+                if self.baseline:
+                    sequence = di.loadSequence('train', shuffle=True, rng=self.rng, docom=True, dsize=self.dsize)
+                else:
+                    sequence = di.loadSequence('train', ['0'], docom=True, dsize=self.dsize)
                 self.data = self.convert(sequence)
             elif self.phase == 'test':
-                sequence1 = di.loadSequence('test_seq_1', dsize=self.dsize)  # test sequence 1
-                sequence2 = di.loadSequence('test_seq_2', dsize=self.dsize)  # test sequence 2
+                sequence1 = di.loadSequence('test_seq_1', docom=True, dsize=self.dsize)  # test sequence 1
+                sequence2 = di.loadSequence('test_seq_2', docom=True, dsize=self.dsize)  # test sequence 2
                 data_1 = self.convert(sequence1)
                 size_1 = data_1['com'].shape[0]
                 data_2 = self.convert(sequence2, size_before=size_1) # concate two test sequence together
@@ -189,12 +200,12 @@ class videoRead(caffe.Layer):
         # read the layer param contain the sequence number and sequence size
         self.buffer_size = int(layer_params['buffer_size'])
         self.frames = int(layer_params['frame_size'])
-        self.suffle = (layer_params['shuffle'] == "true")
+        self.baseline = (layer_params['baseline'] == "true")
         self.imagesize = int(layer_params['size'])
         self.initialize()
 
         dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames, \
-                              self.dim, dsize=(self.imagesize, self.imagesize))
+                              self.dim, dsize=(self.imagesize, self.imagesize), baseline=self.baseline)
         dataReader.loadData()
         self.seq_dict = dataReader.dataToSeq()
 
@@ -342,3 +353,13 @@ if __name__ == '__main__':
     data_load = data.loadData()
     data = DataRead(name='ICVL', phase='test', dsize=(128, 128))
     data_load = data.loadData()
+
+    
+    #data = DataRead(name='NYU', phase='train',dsize=(128, 128), baseline=False)
+    #data_load = data.loadData()
+    #data = DataRead(name='NYU', phase='test', dsize=(128, 128), baseline=False)
+    #data_load = data.loadData()
+    #data = DataRead(name='ICVL', phase='train',dsize=(128, 128), baseline=False)
+    #data_load = data.loadData()
+    #data = DataRead(name='ICVL', phase='test', dsize=(128, 128), baseline=False)
+    #data_load = data.loadData()
