@@ -1,4 +1,4 @@
-name: "baseline-multi-branches"
+name: "multi-branches"
 
 layer {
     name: "data"
@@ -148,6 +148,7 @@ layer {
   type: "InnerProduct"
   bottom: "poolL3"
   top: "FC1-center"
+  propagate_down: 0
   param {
     lr_mult: 1
   }
@@ -246,6 +247,7 @@ layer {
   type: "InnerProduct"
   bottom: "poolL3"
   top: "FC1-second"
+  propagate_down: 0
   param {
     lr_mult: 1
   }
@@ -344,6 +346,7 @@ layer {
   type: "InnerProduct"
   bottom: "poolL3"
   top: "FC1-third"
+  propagate_down: 0
   param {
     lr_mult: 1
   }

@@ -13,7 +13,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTrainSeq"
-        param_str: '{"buffer_size": "512", "frame_size": "1", "shuffle": "true", "size": "128"}'
+        param_str: '{"buffer_size": "512", "frame_size": "1", "baseline": "true", "size": "128"}'
     }
     include: {
         phase: TRAIN
@@ -33,7 +33,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTestSeq"
-        param_str: '{"buffer_size": "64", "frame_size": "1", "shuffle": "true", "size": "128"}'
+        param_str: '{"buffer_size": "64", "frame_size": "1", "baseline": "true", "size": "128"}'
     }
     include: {
         phase: TEST
@@ -47,7 +47,8 @@ layer {
   top: "convL1"
   convolution_param {
     num_output: 8
-    kernel_size: 5
+    kernel_size: 3
+    pad: 1
     weight_filler {
       type: "xavier"
     }
@@ -83,8 +84,9 @@ layer {
   bottom: "poolL1"
   top: "convL2"
   convolution_param {
-    num_output: 8
-    kernel_size: 5
+    num_output: 16
+    kernel_size: 3
+    pad: 1
     weight_filler {
       type: "xavier"
     }
@@ -101,27 +103,16 @@ layer {
   top: "convL2"
 }
 
-layer {
-  name: "poolL2"
-  type: "Pooling"
-  bottom: "convL2"
-  top: "poolL2"
-  pooling_param {
-    pool: MAX
-    kernel_size: 2
-    stride: 2
-  }
-}
-
 
 layer {
   name: "convL3"
   type: "Convolution"
-  bottom: "poolL2"
+  bottom: "convL2"
   top: "convL3"
   convolution_param {
-    num_output: 8
+    num_output: 32
     kernel_size: 3
+    pad: 1
     weight_filler {
       type: "xavier"
     }
@@ -138,10 +129,23 @@ layer {
   top: "convL3"
 }
 
+
+layer {
+  name: "poolL3"
+  type: "Pooling"
+  bottom: "convL3"
+  top: "poolL3"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+
 layer {
   name: "FC1"
   type: "InnerProduct"
-  bottom: "convL3"
+  bottom: "poolL3"
   top: "FC1"
   param {
     lr_mult: 1

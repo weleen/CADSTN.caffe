@@ -11,7 +11,7 @@ MODELS=$ROOT/models/NYU/hand_baseline
 
 export PYTHONPATH=$ROOT/caffe/python:$ROOT/lib/data/:$ROOT/lib/layers:$ROOT/lib/util:$PYTHONPATH
 
-LOG_FILE="$LOG/baseline_`date`.txt"
+LOG_FILE="$LOG/baseline_`date +'%Y-%m-%d_%H-%M-%S'`.txt"
 exec &> >(tee -a "$LOG_FILE")
 echo Logging to "$LOG_FILE"
 

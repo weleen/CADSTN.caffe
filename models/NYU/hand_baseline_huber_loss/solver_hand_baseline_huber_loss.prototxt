@@ -1,6 +1,6 @@
 test_iter: 129
 test_interval: 1000
-net: "models/NYU/hand_baseline_fix/hand_baseline_fix.prototxt"
+net: "models/NYU/hand_baseline_huber_loss/hand_baseline_huber_loss.prototxt"
 base_lr: 1e-3
 momentum: 0.9
 momentum2: 0.999
@@ -12,7 +12,6 @@ display: 200
 max_iter: 200000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "weights/NYU/hand_baseline_fix/hand_baseline_fix"
+snapshot_prefix: "weights/NYU/hand_baseline_huber_loss/hand_baseline_huber_loss"
 type: "Adam"
 solver_mode: GPU
-
