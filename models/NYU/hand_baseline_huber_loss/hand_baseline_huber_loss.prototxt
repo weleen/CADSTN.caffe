@@ -237,10 +237,13 @@ layer {
 
 layer {
 	name: "loss"
-	type: "HuberLoss"
+	type: "SmoothL1Loss"
 	bottom: "joint_pred"
 	bottom: "joint"
 	top: "loss"
+  smooth_l1_loss_param {
+    sigma: 10
+  }
 	loss_weight: 1
 }
 
