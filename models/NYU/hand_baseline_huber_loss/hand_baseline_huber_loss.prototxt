@@ -236,10 +236,23 @@ layer {
 }
 
 layer {
+  name: "reshape_joint"
+  type: "Reshape"
+  bottom: "joint"
+  top: "reshape_joint"
+  reshape_param {
+    shape {
+      dim: -1
+      dim: 42
+    }
+  }
+}
+
+layer {
 	name: "loss"
 	type: "SmoothL1Loss"
 	bottom: "joint_pred"
-	bottom: "joint"
+	bottom: "reshape_joint"
 	top: "loss"
   smooth_l1_loss_param {
     sigma: 10
