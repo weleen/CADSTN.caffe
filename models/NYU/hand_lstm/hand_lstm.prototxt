@@ -4,12 +4,12 @@ layer {
     name: "data"
     type: "Python"
     top: "depth"
+    top: "dpt3D"
     top: "joint"
     top: "clip_markers"
     top: "com"
     top: "config"
     top: "inds"
-    top: "clip_markers2"
     python_param {
         module: "data_input_layer"
         layer: "NYUTrainSeq"
@@ -19,17 +19,16 @@ layer {
         phase: TRAIN
     }
 }
-
 layer {
     name: "data"
     type: "Python"
     top: "depth"
+    top: "dpt3D"
     top: "joint"
     top: "clip_markers"
     top: "com"
     top: "config"
     top: "inds"
-    top: "clip_markers2"
     python_param {
         module: "data_input_layer"
         layer: "NYUTestSeq"
@@ -39,98 +38,17 @@ layer {
         phase: TEST
     }
 }
-
 layer {
-  name: "convL1"
+  name: "convL1_baseline"
   type: "Convolution"
   bottom: "depth"
-  top: "convL1"
+  top: "convL1_baseline"
   param {
-  	lr_mult: 0
+    lr_mult: 0
     decay_mult: 0
   }
   param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  convolution_param {
-    num_output: 8
-    kernel_size: 3
-    pad: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-    }
-  }
-}
-
-layer {
-  name: "ReLUconvL1"
-  type: "ReLU"
-  bottom: "convL1"
-  top: "convL1"
-}
-
-
-layer {
-  name: "poolL1"
-  type: "Pooling"
-  bottom: "convL1"
-  top: "poolL1"
-  pooling_param {
-    pool: MAX
-    kernel_size: 4
-    stride: 4
-  }
-}
-
-layer {
-  name: "convL2"
-  type: "Convolution"
-  bottom: "poolL1"
-  top: "convL2"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  convolution_param {
-    num_output: 16
-    kernel_size: 3
-    pad: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-    }
-  }
-}
-
-layer {
-  name: "ReLUconvL2"
-  type: "ReLU"
-  bottom: "convL2"
-  top: "convL2"
-}
-
-
-layer {
-  name: "convL3"
-  type: "Convolution"
-  bottom: "convL2"
-  top: "convL3"
-  param {
-  	lr_mult: 0
-    decay_mult: 0
-  }
-  param {
-  	lr_mult: 0
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -145,38 +63,118 @@ layer {
     }
   }
 }
-
 layer {
-  name: "ReLUconvL3"
+  name: "ReLUconvL1_baseline"
   type: "ReLU"
-  bottom: "convL3"
-  top: "convL3"
+  bottom: "convL1_baseline"
+  top: "convL1_baseline"
 }
-
-
 layer {
-  name: "poolL3"
+  name: "poolL1_baseline"
   type: "Pooling"
-  bottom: "convL3"
-  top: "poolL3"
+  bottom: "convL1_baseline"
+  top: "poolL1_baseline"
+  pooling_param {
+    pool: MAX
+    kernel_size: 4
+    stride: 4
+  }
+}
+layer {
+  name: "convL2_baseline"
+  type: "Convolution"
+  bottom: "poolL1_baseline"
+  top: "convL2_baseline"
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUconvL2_baseline"
+  type: "ReLU"
+  bottom: "convL2_baseline"
+  top: "convL2_baseline"
+}
+layer {
+  name: "poolL2_baseline"
+  type: "Pooling"
+  bottom: "convL2_baseline"
+  top: "poolL2_baseline"
   pooling_param {
     pool: MAX
     kernel_size: 2
     stride: 2
   }
 }
-
 layer {
-  name: "FC1"
-  type: "InnerProduct"
-  bottom: "poolL3"
-  top: "FC1"
+  name: "convL3_baseline"
+  type: "Convolution"
+  bottom: "poolL2_baseline"
+  top: "convL3_baseline"
   param {
-  	lr_mult: 0
+    lr_mult: 0
     decay_mult: 0
   }
   param {
-  	lr_mult: 0
+    lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 128
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUconvL3_baseline"
+  type: "ReLU"
+  bottom: "convL3_baseline"
+  top: "convL3_baseline"
+}
+layer {
+  name: "poolL3_baseline"
+  type: "Pooling"
+  bottom: "convL3_baseline"
+  top: "poolL3_baseline"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layer {
+  name: "FC1_baseline"
+  type: "InnerProduct"
+  bottom: "poolL3_baseline"
+  top: "FC1_baseline"
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+  param {
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -189,28 +187,25 @@ layer {
     }
   }
 }
-
 layer {
-  name: "ReLUFC1"
+  name: "ReLUFC1_baseline"
   type: "ReLU"
-  bottom: "FC1"
-  top: "FC1"
+  bottom: "FC1_baseline"
+  top: "FC1_baseline"
 }
-
 layer {
-  name: "DropoutFC1"
+  name: "DropoutFC1_baseline"
   type: "Dropout"
-  bottom: "FC1"
-  top: "FC1"
+  bottom: "FC1_baseline"
+  top: "FC1_baseline"
   dropout_param {
     dropout_ratio: 0.3
   }
 }
-
 layer {
     name: "reshape-data"
     type: "Reshape"
-    bottom: "FC1"
+    bottom: "FC1_baseline"
     top: "reshape-data"
     reshape_param {
         shape {
@@ -220,20 +215,19 @@ layer {
         }
     }
 }
-
 layer {
-    name: "reshape-joint"
-    type: "Reshape"
-    bottom: "joint"
-    top: "reshape-joint"
-    reshape_param {
-        shape {
-            dim: -1
-            dim: 42
-        }
+  name: "reshape-joint"
+  type: "Reshape"
+  bottom: "joint"
+  top: "reshape-joint"
+  reshape_param {
+    shape {
+      dim: 16
+      dim: -1
+      dim: 42
     }
+  }
 }
-
 layer {
     name: "reshape-cm"
     type: "Reshape"
@@ -246,7 +240,6 @@ layer {
         }
     }
 }
-
 layer {
     name: "lstm"
     type: "LSTM"
@@ -269,7 +262,6 @@ layer {
         }
     }
 }
-
 layer {
     name: "lstm-drop"
     type: "Dropout"
@@ -279,7 +271,6 @@ layer {
         dropout_ratio: 0.5
     }
 }
-
 layer {
     name: "concat-feature"
     type: "Concat"
@@ -290,12 +281,11 @@ layer {
         axis: 2
     }
 }
-
 layer {
-    name: "pred_joint"
+    name: "pred_joint_lstm"
     type: "InnerProduct"
     bottom: "concat-feature"
-    top: "pred_joint"
+    top: "pred_joint_lstm"
     param {
         lr_mult: 1
         decay_mult: 1
@@ -315,33 +305,18 @@ layer {
         axis: 2
     }
 }
-
-layer {
-	name: "reshape_pred_joint"
-    type: "Reshape"
-    bottom: "pred_joint"
-    top: "reshape_pred_joint"
-    reshape_param {
-    	shape {
-        	dim: -1
-            dim: 42
-        }
-    }
-}
-
 layer {
     name: "loss"
     type: "EuclideanLoss"
-    bottom: "reshape_pred_joint"
+    bottom: "pred_joint_lstm"
     bottom: "reshape-joint"
     top: "loss"
 }
-
 layer {
-	name: "ignore"
-	type: "Silence"
+  name: "ignore"
+  type: "Silence"
+  bottom: "dpt3D"
 	bottom: "inds"
 	bottom: "com"
 	bottom: "config"
-    bottom: "clip_markers2"
-}
+} 

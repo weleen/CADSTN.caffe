@@ -31,8 +31,8 @@ from data.importers import DepthImporter, NYUImporter, ICVLImporter
 from mpl_toolkits.mplot3d import Axes3D
 from data.transformations import transformPoint2D
 import progressbar as pb
-import vtk
-from vtk.util.numpy_support import vtk_to_numpy
+#import vtk
+#from vtk.util.numpy_support import vtk_to_numpy
 #from util.vtkpointcloud import VtkPointCloud
 from sklearn import mixture
 

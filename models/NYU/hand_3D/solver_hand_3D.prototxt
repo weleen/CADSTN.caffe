@@ -1,7 +1,7 @@
-test_iter: 516
+test_iter: 129
 test_interval: 1000
-net: "models/NYU/hand_lstm/hand_lstm.prototxt"
-base_lr: 1e-4
+net: "models/NYU/hand_3D/hand_3D.prototxt"
+base_lr: 1e-3
 momentum: 0.9
 momentum2: 0.999
 lr_policy: "step"
@@ -12,6 +12,6 @@ display: 500
 max_iter: 100000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "weights/NYU/hand_lstm/hand_lstm"
+snapshot_prefix: "weights/NYU/hand_3D/hand_3D"
 type: "Adam"
 solver_mode: GPU

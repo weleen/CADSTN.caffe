@@ -83,10 +83,13 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
 
     # extract seq_size (video num), frame_size (frames in video) and joint_size (dimension need to regress) from the blob
     if 'baseline' in model_name:
-        frame_size, joint_size = net.blobs['joint_pred'].data.shape
+        frame_size, joint_size = net.blobs['joint_pred_baseline'].data.shape
+        seq_size = 1
+    elif 'mix' in model_name:
+        frame_size, joint_size = net.blobs['joint_pred_mix'].data.shape
         seq_size = 1
     else:
-        frame_size, seq_size, joint_size = net.blobs['pred_joint'].data.shape
+        frame_size, seq_size, joint_size = net.blobs['joint_pred_mix'].data.shape
     dim = 3 # estimate 3 dimension x, y and z
 
     # recognize different dataset
@@ -126,14 +129,17 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
             col = j % seq_size
             if 'baseline' in model_name:
                 if ind <= 2440:
-                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_baseline'].data[j].reshape(joint_size / dim, dim) * \
                                                       300 / 2 + net.blobs['com'].data[j].reshape(1, dim))
                 else:
-                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_baseline'].data[j].reshape(joint_size / dim, dim) * \
                                                       300 * 0.87 / 2 + net.blobs['com'].data[j].reshape(1, dim))
+            elif 'mix' in model_name:
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_mix'].data[j].reshape(joint_size / dim, dim) * \
+                                                      net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
             else:
                 predicted_joints[int(ind) - 1] = \
-                    (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
+                    (net.blobs['joint_pred_mix'].data[row][col].reshape(joint_size / dim, dim) \
                     * net.blobs['config'].data[j][0] / 2 \
                     + net.blobs['com'].data[j].reshape(1, dim)).copy()
     t_end = time.time()
@@ -156,8 +162,8 @@ if __name__ == '__main__':
     # test NYU dataset
     di = NYUImporter('../dataset/NYU/', cacheDir='../dataset/cache/')
     gt3D = []
-    Seq2_1 = di.loadSequence('test_1')
-    Seq2_2 = di.loadSequence('test_2')
+    Seq2_1 = di.loadSequence('test_1',docom=True)
+    Seq2_2 = di.loadSequence('test_2',docom=True)
     testSeqs = [Seq2_1, Seq2_2]
     for seq in testSeqs:
         gt3D.extend([j.gt3Dorig for j in seq.data])
@@ -173,13 +179,14 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model.append(('baseline','200000')) # 20.9392899563mm
+    model.append(('baseline','100000')) # 20.9392899563mm
     #model.append(('baseline_concate_features', '200000'))
     #model.append(('baseline_msra', '300000'))
-    model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
+    #model.append(('lstm','200000')) # 13 20.9442366067mm 15 20.9589169614mm
     #model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
     #model.append(('bidirectional_lstm','190000'))
     #model.append(('bidirectional_lstm_no_concate', '200000'))
+    model.append(('mix', '100000'))
     for ind in xrange(len(model)):
         joints, file_name= predictJoints(model[ind])
 

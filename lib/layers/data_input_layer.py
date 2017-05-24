@@ -45,19 +45,20 @@ class DataRead(object):
         dataset = {}
         com = []
         fileName = []
-
+        dpt3D = []
         size = len(sequence.data)
         print('size of {} {} dataset is {}'.format(self.name, sequence.name, size))
         for i in xrange(len(sequence.data)):
             data = sequence.data[i]
             com.append(data.com)
+            dpt3D.append(data.dpt3D)
             if self.name == 'NYU':
                 fileName.append(int(data.fileName[-11:-4]))
             elif self.name == 'ICVL' and size_before is not None:
                 fileName.append(int(data.fileName[(data.fileName.find('image_') + 6): \
                     (data.fileName.find('.png'))]) + size_before)
-
         dataset['depth'] = np.asarray(dpt)
+        dataset['dpt3D'] = np.asarray(dpt3D)
         dataset['com'] = np.asarray(com)
         dataset['inds'] = np.asarray(fileName)
         dataset['config'] = np.asarray(config['cube']).reshape(1, self.dim).repeat(size, axis=0)
@@ -76,10 +77,10 @@ class DataRead(object):
         if self.name == 'NYU':
             di = NYUImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
             if self.phase == 'train':
-		if self.baseline:
-                    sequence = di.loadSequence('train', shuffle=True, rng=self.rng, flip=True, rotation=True, docom=True, dsize=self.dsize)  # train sequence
-		else:
-		    sequence = di.loadSequence('train', docom=True, dsize=self.dsize)
+                if self.baseline:
+                    sequence = di.loadSequence('train', shuffle=True, rng=self.rng, rotation=True, docom=True, dsize=self.dsize)  # train sequence
+                else:
+                    sequence = di.loadSequence('train', docom=True, dsize=self.dsize)
                 self.data = self.convert(sequence)
             elif self.phase == 'test':
                 sequence1 = di.loadSequence('test_1', docom=True, dsize=self.dsize)  # test sequence 1
@@ -88,6 +89,7 @@ class DataRead(object):
                 data_2 = self.convert(sequence2)
 
                 self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
+                self.data['dpt3D'] = np.concatenate([data_1['dpt3D'], data_2['dpt3D']])
                 self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
                 self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
                 self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
@@ -109,6 +111,7 @@ class DataRead(object):
                 data_2 = self.convert(sequence2, size_before=size_1) # concate two test sequence together
 
                 self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
+                self.data['dpt3D'] = np.concatenate([data_1['dpt3D'], data_2['dpt3D']])
                 self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
                 self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
                 self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
@@ -136,6 +139,7 @@ class DataRead(object):
                     tmp = current_seq[-1]
                 else:
                     tmp = {'depth': self.data['depth'][ind],
+                           'dpt3D': self.data['dpt3D'][ind],
                            'com': self.data['com'][ind],
                            'inds': self.data['inds'][ind],
                            'joint': self.data['joint'][ind],
@@ -212,7 +216,7 @@ class videoRead(caffe.Layer):
         self.sequence_generator = sequenceGenerator(self.buffer_size, self.frames,\
                                                    len(self.seq_dict), self.seq_dict)
 
-        self.top_names = ['depth', 'joint', 'clip_markers', 'com', 'config', 'inds', 'clip_markers2']
+        self.top_names = ['depth', 'dpt3D', 'joint', 'clip_markers', 'com', 'config', 'inds']
         print 'Outputs: ', self.top_names
         if len(top) != len(self.top_names):
             raise Exception('Incorrect number of outputs (expect %d, got %d)'\
@@ -227,6 +231,8 @@ class videoRead(caffe.Layer):
         for top_index, name in enumerate(self.top_names):
             if name == 'depth':
                 shape = (self.N, 1, self.imagesize, self.imagesize)
+            elif name == 'dpt3D':
+                shape = (self.N, 8, self.imagesize, self.imagesize)
             elif name == 'joint':
                 shape = (self.N, self.joints, self.dim)
             elif name == 'clip_markers':
@@ -237,8 +243,6 @@ class videoRead(caffe.Layer):
                 shape = (self.N, self.dim)
             elif name == 'inds':
                 shape = (self.N, )
-            elif name == 'clip_markers2':
-                shape = (3, self.N)
             top[top_index].reshape(*shape)
 
     def reshape(self, bottom, top):
@@ -248,26 +252,24 @@ class videoRead(caffe.Layer):
         data = self.sequence_generator()
 
         depth = np.zeros((self.N, 1, self.imagesize, self.imagesize))
+        dpt3D = np.zeros((self.N, 8, self.imagesize, self.imagesize))
         joint = np.zeros((self.N, self.joints, self.dim))
         cm = np.zeros((self.N, ))
         com = np.zeros((self.N, self.dim))
         config = np.zeros((self.N, self.dim))
         inds = np.zeros((self.N))
-        cm2 = np.zeros((3, self.N))
 
         # rearrange the dataset for LSTM
         for i in xrange(self.frames):
             for j in xrange(self.buffer_size):
                 idx = i*self.buffer_size + j
                 depth[idx] = data[j][i]['depth']
+                dpt3D[idx] = data[j][i]['dpt3D']
                 joint[idx] = data[j][i]['joint']
                 cm[idx] = data[j][i]['clip_markers']
                 com[idx] = data[j][i]['com']
                 config[idx] = data[j][i]['config']
                 inds[idx] = data[j][i]['inds']
-
-        # generate clip_markers2
-        cm2[1:3][:] = 1
 
         if DEBUG:
             print "top shape:"
@@ -277,12 +279,14 @@ class videoRead(caffe.Layer):
             print "top[com] shape = {}, copy from {}".format(top[3].shape, com.shape)
             print "top[config] shape = {}, copy from {}".format(top[4].shape, config.shape)
             print "top[inds] shape = {}, copy from {}".format(top[5].shape, inds.shape)
-            print "top[clip_markers2] shape = {}, copy from {}".format(top[7].shape, cm2.shape)
 
         for top_index, name in zip(range(len(top)), self.top_names):
             if name == 'depth':
                 for i in range(self.N):
                     top[top_index].data[i, ...] = depth[i]
+            elif name == 'dpt3D':
+                for i in range(self.N):
+                    top[top_index].data[i, ...] = dpt3D[i]
             elif name == 'joint':
                 for i in range(self.N):
                     top[top_index].data[i, ...] = joint[i]
@@ -296,8 +300,6 @@ class videoRead(caffe.Layer):
                     top[top_index].data[i, ...] = config[i]
             elif name == 'inds':
                 top[top_index].data[...] = inds
-            elif name == 'clip_markers2':
-                top[top_index].data[...] = cm2
 
     def backward(self):
         pass
@@ -345,21 +347,22 @@ class ICVLTestSeq(videoRead):
 
 
 if __name__ == '__main__':
-    data = DataRead(name='NYU', phase='train',dsize=(128, 128))
-    data_load = data.loadData()
-    data = DataRead(name='NYU', phase='test', dsize=(128, 128))
-    data_load = data.loadData()
-    data = DataRead(name='ICVL', phase='train',dsize=(128, 128))
-    data_load = data.loadData()
-    data = DataRead(name='ICVL', phase='test', dsize=(128, 128))
-    data_load = data.loadData()
+    pass
+    # data = DataRead(name='NYU', phase='train',dsize=(128, 128))
+    # data_load = data.loadData()
+    # data = DataRead(name='NYU', phase='test', dsize=(128, 128))
+    # data_load = data.loadData()
+    # data = DataRead(name='ICVL', phase='train',dsize=(128, 128))
+    # data_load = data.loadData()
+    # data = DataRead(name='ICVL', phase='test', dsize=(128, 128))
+    # data_load = data.loadData()
 
     
-    #data = DataRead(name='NYU', phase='train',dsize=(128, 128), baseline=False)
-    #data_load = data.loadData()
-    #data = DataRead(name='NYU', phase='test', dsize=(128, 128), baseline=False)
-    #data_load = data.loadData()
-    #data = DataRead(name='ICVL', phase='train',dsize=(128, 128), baseline=False)
-    #data_load = data.loadData()
-    #data = DataRead(name='ICVL', phase='test', dsize=(128, 128), baseline=False)
-    #data_load = data.loadData()
+    # data = DataRead(name='NYU', phase='train',dsize=(128, 128), baseline=False)
+    # data_load = data.loadData()
+    # data = DataRead(name='NYU', phase='test', dsize=(128, 128), baseline=False)
+    # data_load = data.loadData()
+    # data = DataRead(name='ICVL', phase='train',dsize=(128, 128), baseline=False)
+    # data_load = data.loadData()
+    # data = DataRead(name='ICVL', phase='test', dsize=(128, 128), baseline=False)
+    # data_load = data.loadData()

@@ -1,4 +1,4 @@
-name: "baseline"
+name: "depth"
 
 layer {
   name: "data"
@@ -39,10 +39,10 @@ layer {
   }
 }
 layer {
-  name: "convL1_baseline"
+  name: "convL1"
   type: "Convolution"
   bottom: "depth"
-  top: "convL1_baseline"
+  top: "convL1"
   convolution_param {
     num_output: 32
     kernel_size: 3
@@ -56,16 +56,16 @@ layer {
   }
 }
 layer {
-  name: "ReLUconvL1_baseline"
+  name: "ReLUconvL1"
   type: "ReLU"
-  bottom: "convL1_baseline"
-  top: "convL1_baseline"
+  bottom: "convL1"
+  top: "convL1"
 }
 layer {
-  name: "poolL1_baseline"
+  name: "poolL1"
   type: "Pooling"
-  bottom: "convL1_baseline"
-  top: "poolL1_baseline"
+  bottom: "convL1"
+  top: "poolL1"
   pooling_param {
     pool: MAX
     kernel_size: 4
@@ -73,10 +73,10 @@ layer {
   }
 }
 layer {
-  name: "convL2_baseline"
+  name: "convL2"
   type: "Convolution"
-  bottom: "poolL1_baseline"
-  top: "convL2_baseline"
+  bottom: "poolL1"
+  top: "convL2"
   convolution_param {
     num_output: 64
     kernel_size: 3
@@ -90,16 +90,16 @@ layer {
   }
 }
 layer {
-  name: "ReLUconvL2_baseline"
+  name: "ReLUconvL2"
   type: "ReLU"
-  bottom: "convL2_baseline"
-  top: "convL2_baseline"
+  bottom: "convL2"
+  top: "convL2"
 }
 layer {
-  name: "poolL2_baseline"
+  name: "poolL2"
   type: "Pooling"
-  bottom: "convL2_baseline"
-  top: "poolL2_baseline"
+  bottom: "convL2"
+  top: "poolL2"
   pooling_param {
     pool: MAX
     kernel_size: 2
@@ -107,10 +107,10 @@ layer {
   }
 }
 layer {
-  name: "convL3_baseline"
+  name: "convL3"
   type: "Convolution"
-  bottom: "poolL2_baseline"
-  top: "convL3_baseline"
+  bottom: "poolL2"
+  top: "convL3"
   convolution_param {
     num_output: 128
     kernel_size: 3
@@ -124,16 +124,16 @@ layer {
   }
 }
 layer {
-  name: "ReLUconvL3_baseline"
+  name: "ReLUconvL3"
   type: "ReLU"
-  bottom: "convL3_baseline"
-  top: "convL3_baseline"
+  bottom: "convL3"
+  top: "convL3"
 }
 layer {
-  name: "poolL3_baseline"
+  name: "poolL3"
   type: "Pooling"
-  bottom: "convL3_baseline"
-  top: "poolL3_baseline"
+  bottom: "convL3"
+  top: "poolL3"
   pooling_param {
     pool: MAX
     kernel_size: 2
@@ -141,10 +141,10 @@ layer {
   }
 }
 layer {
-  name: "FC1_baseline"
+  name: "FC1"
   type: "InnerProduct"
-  bottom: "poolL3_baseline"
-  top: "FC1_baseline"
+  bottom: "poolL3"
+  top: "FC1"
   param {
     lr_mult: 1
   }
@@ -159,25 +159,25 @@ layer {
   }
 }
 layer {
-  name: "ReLUFC1_baseline"
+  name: "ReLUFC1"
   type: "ReLU"
-  bottom: "FC1_baseline"
-  top: "FC1_baseline"
+  bottom: "FC1"
+  top: "FC1"
 }
 layer {
-  name: "DropoutFC1_baseline"
+  name: "DropoutFC1"
   type: "Dropout"
-  bottom: "FC1_baseline"
-  top: "FC1_baseline"
+  bottom: "FC1"
+  top: "FC1"
   dropout_param {
     dropout_ratio: 0.3
   }
 }
 layer {
-  name: "FC2_baseline"
+  name: "FC2"
   type: "InnerProduct"
-  bottom: "FC1_baseline"
-  top: "FC2_baseline"
+  bottom: "FC1"
+  top: "FC2"
   param {
     lr_mult: 1
   }
@@ -192,25 +192,25 @@ layer {
   }
 }
 layer {
-  name: "ReLUFC2_baseline"
+  name: "ReLUFC2"
   type: "ReLU"
-  bottom: "FC2_baseline"
-  top: "FC2_baseline"
+  bottom: "FC2"
+  top: "FC2"
 }
 layer {
-  name: "DropoutFC2_baseline"
+  name: "DropoutFC2"
   type: "Dropout"
-  bottom: "FC2_baseline"
-  top: "FC2_baseline"
+  bottom: "FC2"
+  top: "FC2"
   dropout_param {
     dropout_ratio: 0.3
   }
 }
 layer {
-  name: "joint_pred_baseline"
+  name: "joint_pred_depth"
   type: "InnerProduct"
-  bottom: "FC2_baseline"
-  top: "joint_pred_baseline"
+  bottom: "FC2"
+  top: "joint_pred_depth"
   param {
     lr_mult: 1
   }
@@ -228,7 +228,7 @@ layer {
 layer {
 	name: "loss"
 	type: "EuclideanLoss"
-	bottom: "joint_pred_baseline"
+	bottom: "joint_pred_depth"
 	bottom: "joint"
 	top: "loss"
 	loss_weight: 1

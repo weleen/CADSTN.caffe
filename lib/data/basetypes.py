@@ -31,5 +31,5 @@ __maintainer__ = "Markus Oberweger"
 __email__ = "oberweger@icg.tugraz.at"
 __status__ = "Development"
 
-ICVLFrame = namedtuple('ICVLFrame', ['dpt', 'gtorig', 'gtcrop', 'T', 'gt3Dorig', 'gt3Dcrop', 'com', 'fileName', 'subSeqName'])
+ICVLFrame = namedtuple('ICVLFrame', ['dpt', 'dpt3D', 'gtorig', 'gtcrop', 'T', 'gt3Dorig', 'gt3Dcrop', 'com', 'fileName', 'subSeqName'])
 NamedImgSequence = namedtuple('NamedImgSequence', ['name', 'data', 'config'])

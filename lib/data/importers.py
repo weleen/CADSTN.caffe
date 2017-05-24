@@ -517,7 +517,7 @@ class NYUImporter(DepthImporter):
 
         return imgdata
 
-    def loadSequence(self,seqName,allJoints=False,Nmax=float('inf'),shuffle=False,rng=None,docom=False,flip=False,rotation=False,dsize=(128, 128)):
+    def loadSequence(self,seqName,allJoints=False,Nmax=float('inf'),shuffle=False,rng=None,docom=False,rotation=False,dsize=(128, 128)):
         """
         Load an image sequence from the dataset
         :param seqName: sequence name, e.g. train
@@ -567,19 +567,14 @@ class NYUImporter(DepthImporter):
         pbar.start()
 
         data = []
-        if flip:
-            data_flip = []
         if rotation:
             data_rotation = []
         i=0
 
         for line in range(joints3D.shape[0]):
             dptFileName = '{0:s}/depth_1_{1:07d}.png'.format(objdir, line+1)
+            print dptFileName
             # augment the training dataset
-            if flip:
-                assert seqName == 'train', 'we only flip the training data'
-                # vertical(0) or horizantal(1) flip
-                flip_type = np.random.randint(2)
             if rotation:
                 assert seqName == 'train', 'we only rotate the training data'
                 # 90', 180', or 270' rotation degree
@@ -600,8 +595,6 @@ class NYUImporter(DepthImporter):
 
             dpt = self.loadDepthMap(dptFileName)
             h, w = dpt.shape
-            if flip:
-                dpt_flip = cv2.flip(dpt, flip_type)
             if rotation:
                 import math
                 def rotate_about_center(src, angle, scale=1.):
@@ -635,21 +628,8 @@ class NYUImporter(DepthImporter):
                 gtorig[jt,2] = joints2D[line,ii,2]
                 jt += 1
                 
-            gtorig_flip = np.zeros((self.numJoints, 3), np.float32)
-            gtorig_rotation = np.zeros((self.numJoints, 3), np.float32)
-            if flip:
-                # vertical flip and horizantal flip is different
-                if flip_type == 0: # vertical flip
-                    for i in xrange(self.numJoints):
-                        gtorig_flip[i, 0] = gtorig[i, 0]
-                        gtorig_flip[i, 1] = h - gtorig[i, 1]
-                        gtorig_flip[i, 2] = gtorig[i, 2]
-                elif flip_type == 1: # horizantal flip
-                    for i in xrange(self.numJoints):
-                        gtorig_flip[i, 0] = w - gtorig[i, 0]
-                        gtorig_flip[i, 1] = gtorig[i, 1]
-                        gtorig_flip[i, 2] = gtorig[i, 2]
             if rotation:
+                gtorig_rotation = np.zeros((self.numJoints, 3), np.float32)
                 for i, joint in enumerate(gtorig):
                     m11 = rotMat[0, 0]
                     m12 = rotMat[0, 1]
@@ -674,18 +654,13 @@ class NYUImporter(DepthImporter):
                 jt += 1
             
             # transform from gtorign
-            gt3Dorig_flip = np.zeros((self.numJoints, 3), np.float32)
             gt3Dorig_rotation = np.zeros((self.numJoints, 3), np.float32)
-            if flip:
-                gt3Dorig_flip = self.jointsImgTo3D(gtorig_flip)
             if rotation:
                 gt3Dorig_rotation = self.jointsImgTo3D(gtorig_rotation)
                 
             #print gt3D
             #print("{}".format(gtorig))
             #self.showAnnotatedDepth(ICVLFrame(dpt,gtorig,gtorig,0,gt3Dorig,gt3Dorig,0,dptFileName,''))
-            #print("{}".format(gtorig_flip))
-            #self.showAnnotatedDepth(ICVLFrame(dpt_flip,gtorig_flip,gtorig_flip,0,gt3Dorig_flip,gt3Dorig_flip,0,dptFileName,''))
             #print("{}".format(gtorig_rotation))
             #self.showAnnotatedDepth(ICVLFrame(dpt_rotation,gtorig_rotation,gtorig_rotation,0,gt3Dorig_rotation,gt3Dorig_rotation,0,dptFileName,''))
                         
@@ -705,17 +680,6 @@ class NYUImporter(DepthImporter):
                 print("Skipping image {}, no hand detected".format(dptFileName))
                 continue
             
-            if flip:
-                # Detect hand
-                hd_flip = HandDetector(dpt_flip, self.fx, self.fy, refineNet=refineNet, importer=self)
-                try:
-                    if allJoints:
-                        dpt_flip, M_flip, com_flip = hd_flip.cropArea3D(gtorig_flip[34], size=config['cube'], docom=docom, dsize=dsize)
-                    else:
-                        dpt_flip, M_flip, com_flip = hd_flip.cropArea3D(gtorig_flip[13], size=config['cube'], docom=docom, dsize=dsize)
-                except UserWarning:
-                    print("Skipping image {}, no hand detected".format(dptFileName))
-                    continue
             if rotation:
                 # Detect hand
                 hd_rotation = HandDetector(dpt_rotation, self.fx, self.fy, refineNet=refineNet, importer=self)
@@ -737,15 +701,26 @@ class NYUImporter(DepthImporter):
                 gtcrop[joint, 1] = t[1]
                 gtcrop[joint, 2] = gtorig[joint, 2]
                 
-            if flip:
-                com3D_flip = self.jointImgTo3D(com_flip)
-                gt3Dcrop_flip = gt3Dorig_flip - com3D_flip  # normalize to com
-                gtcrop_flip = np.zeros((gtorig_flip.shape[0], 3), np.float32)
-                for joint in range(gtorig_flip.shape[0]):
-                    t=transformPoint2D(gtorig_flip[joint], M_flip)
-                    gtcrop_flip[joint, 0] = t[0]
-                    gtcrop_flip[joint, 1] = t[1]
-                    gtcrop_flip[joint, 2] = gtorig_flip[joint, 2]
+            # create 3D voxel
+            dpt3D = np.zeros((8, dpt.shape[0], dpt.shape[1]), dtype=np.uint8)
+            sorted_dpt = np.sort(dpt, axis=None)
+            iii = np.where(sorted_dpt != 0)[0][0]
+            min_d= sorted_dpt[iii]
+            max_d = np.max(dpt)
+            slice_range = []
+            slice_step = (max_d - min_d) / 8
+            for i in range(9):
+                slice_range.append(min_d + slice_step * i)
+            slice_range = np.array(slice_range)
+            lh, lw = np.where(dpt!=0)
+            for ii in xrange(lh.shape[0]):
+                ih, iw = lh[ii], lw[ii]
+                dptValue = dpt[ih, iw]
+                slice_layer = np.where(dptValue >= slice_range)[0][-1]
+                if slice_layer == 8:
+                    slice_layer = 7
+                dpt3D[slice_layer, ih, iw] = 1
+
             if rotation:
                 com3D_rotation = self.jointImgTo3D(com_rotation)
                 gt3Dcrop_rotation = gt3Dorig_rotation - com3D_rotation  # normalize to com
@@ -754,20 +729,46 @@ class NYUImporter(DepthImporter):
                     t=transformPoint2D(gtorig_rotation[joint], M_rotation)
                     gtcrop_rotation[joint, 0] = t[0]
                     gtcrop_rotation[joint, 1] = t[1]
-                    gtcrop_rotation[joint, 2] = gtorig_rotation[joint, 2]                
+                    gtcrop_rotation[joint, 2] = gtorig_rotation[joint, 2]
+                dpt3D_rotation = np.zeros((8, dpt.shape[0], dpt.shape[1]), dtype=np.uint8)
+                sorted_dpt_rotation = np.sort(dpt_rotation, axis=None)
+                iii = np.where(sorted_dpt_rotation != 0)[0][0]
+                min_d= sorted_dpt_rotation[iii]
+                max_d = np.max(dpt_rotation)
+                slice_range = []
+                slice_step = (max_d - min_d) / 8
+                for i in range(9):
+                    slice_range.append(min_d + slice_step * i)
+                slice_range = np.array(slice_range)
+                lh, lw = np.where(dpt_rotation!=0)
+                for ii in xrange(lh.shape[0]):
+                    ih, iw = lh[ii], lw[ii]
+                    dptValue = dpt_rotation[ih, iw]
+                    slice_layer = np.where(dptValue >= slice_range)[0][-1]
+                    if slice_layer == 8:
+                        slice_layer = 7
+                    dpt3D_rotation[slice_layer, ih, iw] = 1
 
-            #print("{}".format(gt3Dorig))
-            #self.showAnnotatedDepth(ICVLFrame(dpt,gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,''))
-            #print("{}".format(gt3Dorig_flip))
-            #self.showAnnotatedDepth(ICVLFrame(dpt_flip,gtorig_flip,gtcrop_flip,M_flip,gt3Dorig_flip,gt3Dcrop_flip,com3D_flip,dptFileName,''))
-            #print("{}".format(gt3Dorig_rotation))
-            #self.showAnnotatedDepth(ICVLFrame(dpt_rotation,gtorig_rotation,gtcrop_rotation,M_rotation,gt3Dorig_rotation,gt3Dcrop_rotation,com3D_rotation,dptFileName,''))
-            
-            data.append(ICVLFrame(dpt.astype(np.float32),gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,'') )
-            if flip:            
-                data_flip.append(ICVLFrame(dpt_flip.astype(np.float32),gtorig_flip,gtcrop_flip,M_flip,gt3Dorig_flip,gt3Dcrop_flip,com3D_flip,dptFileName,'') )
+            # print("{}".format(gt3Dorig))
+            # self.showAnnotatedDepth(ICVLFrame(dpt,dpt3D,gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,''))
+            # if rotation:
+            #    print("{}".format(gt3Dorig_rotation))
+            #    self.showAnnotatedDepth(ICVLFrame(dpt_rotation,dpt3D_rotation,gtorig_rotation,gtcrop_rotation,M_rotation,gt3Dorig_rotation,gt3Dcrop_rotation,com3D_rotation,dptFileName,''))
+            # visualize 3D
+            # from mpl_toolkits.mplot3d import Axes3D
+            # fig = plt.figure()
+            # ax = fig.add_subplot(111,projection='3d')
+            # d,x,y = np.where(dpt3D == 1)
+            # ax.scatter(x,y,8 - d)
+            # # ax.view_init(0,0)
+            # ax.set_xlabel('x')
+            # ax.set_ylabel('y')
+            # ax.set_zlabel('d')
+            # plt.show()
+
+            data.append(ICVLFrame(dpt.astype(np.float32),dpt3D,gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,'') )
             if rotation:
-                data_rotation.append(ICVLFrame(dpt_rotation.astype(np.float32),gtorig_rotation,gtcrop_rotation,M_rotation,gt3Dorig_rotation,gt3Dcrop_rotation,com3D_rotation,dptFileName,'') )
+                data_rotation.append(ICVLFrame(dpt_rotation.astype(np.float32),dpt3D_rotation,gtorig_rotation,gtcrop_rotation,M_rotation,gt3Dorig_rotation,gt3Dcrop_rotation,com3D_rotation,dptFileName,'') )
             
             pbar.update(i)
             i+=1
@@ -778,8 +779,6 @@ class NYUImporter(DepthImporter):
 
         pbar.finish()
         # augmentation
-        if flip:
-            data.extend(data_flip)
         if rotation:
             data.extend(data_rotation)
         
