@@ -15,23 +15,20 @@ DEBUG = False
 
 class DataRead(object):
     """Read the data"""
-    def __init__(self, name='NYU', phase='train', path=cachePath, clip_length=16, dim=3, dsize=(128, 128), baseline=True):
+    def __init__(self, name='NYU', phase='train', path=cachePath, dim=3, dsize=(128, 128), aug=True):
         """
         :param dataPath:
         :param name:
         """
         self.name = name
         self.phase = phase
-	self.baseline = baseline
-	if baseline == True: # if train baseline use augmented folder
+	self.aug = aug
+	if aug == True: # if train NYU, use augmented folder
             self.cachePath = path + '_augment'
-	else: # if not baseline, use original folder
+	else: # if not, use original folder
 	    self.cachePath = path
-        self.clip_length = clip_length # how many frames each sequence
-        self.data = {}
         self.dim = dim
         self.dsize = dsize
-        self.rng = np.random.RandomState(23455)
 
     def convert(self, sequence, size_before=None):
         """convert sequence data"""
@@ -57,6 +54,9 @@ class DataRead(object):
             elif self.name == 'ICVL' and size_before is not None:
                 fileName.append(int(data.fileName[(data.fileName.find('image_') + 6): \
                     (data.fileName.find('.png'))]) + size_before)
+            else:
+                fileName.append(int(data.fileName[(data.fileName.find('image_') + 6): \
+                    (data.fileName.find('.png'))]))
         dataset['depth'] = np.asarray(dpt)
         dataset['dpt3D'] = np.asarray(dpt3D)
         dataset['com'] = np.asarray(com)
@@ -64,45 +64,41 @@ class DataRead(object):
         dataset['config'] = np.asarray(config['cube']).reshape(1, self.dim).repeat(size, axis=0)
         dataset['joint'] = np.asarray(gt3D)
 
-        #print "dataset['joint'].shape = {}".format(dataset['joint'].shape) (N, 14 or 16, 3)
-
         return dataset
 
     def loadData(self):
         """
         load the dataset
-        :return: dataset
+        :return: data(dict)
         """
+        data = {} # dataset would be return
         print('create {} {} dataset'.format(self.name, self.phase))
         if self.name == 'NYU':
             di = NYUImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
             if self.phase == 'train':
-                if self.baseline:
-                    sequence = di.loadSequence('train', shuffle=True, rng=self.rng, rotation=True, docom=True, dsize=self.dsize)  # train sequence
+                if self.aug: # do augmentation for training
+                    sequence = di.loadSequence('train', rotation=True, docom=True, dsize=self.dsize)
                 else:
                     sequence = di.loadSequence('train', docom=True, dsize=self.dsize)
-                self.data = self.convert(sequence)
+                data = self.convert(sequence)
             elif self.phase == 'test':
                 sequence1 = di.loadSequence('test_1', docom=True, dsize=self.dsize)  # test sequence 1
                 sequence2 = di.loadSequence('test_2', docom=True, dsize=self.dsize)  # test sequence 2
                 data_1 = self.convert(sequence1)
                 data_2 = self.convert(sequence2)
 
-                self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
-                self.data['dpt3D'] = np.concatenate([data_1['dpt3D'], data_2['dpt3D']])
-                self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
-                self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
-                self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
-                self.data['joint'] = np.concatenate([data_1['joint'], data_2['joint']])
+                data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
+                data['dpt3D'] = np.concatenate([data_1['dpt3D'], data_2['dpt3D']])
+                data['com'] = np.concatenate([data_1['com'], data_2['com']])
+                data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
+                data['config'] = np.concatenate([data_1['config'], data_2['config']])
+                data['joint'] = np.concatenate([data_1['joint'], data_2['joint']])
 
         elif self.name == 'ICVL':
             di = ICVLImporter(root + '/dataset/' + self.name, cacheDir=self.cachePath)
             if self.phase == 'train':
-                if self.baseline:
-                    sequence = di.loadSequence('train', shuffle=True, rng=self.rng, docom=True, dsize=self.dsize)
-                else:
-                    sequence = di.loadSequence('train', ['0'], docom=True, dsize=self.dsize)
-                self.data = self.convert(sequence)
+                sequence = di.loadSequence('train', ['0'], docom=True, dsize=self.dsize) # we can not use augmented ICVL because of the dataset size is too big
+                data = self.convert(sequence)
             elif self.phase == 'test':
                 sequence1 = di.loadSequence('test_seq_1', docom=True, dsize=self.dsize)  # test sequence 1
                 sequence2 = di.loadSequence('test_seq_2', docom=True, dsize=self.dsize)  # test sequence 2
@@ -110,88 +106,91 @@ class DataRead(object):
                 size_1 = data_1['com'].shape[0]
                 data_2 = self.convert(sequence2, size_before=size_1) # concate two test sequence together
 
-                self.data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
-                self.data['dpt3D'] = np.concatenate([data_1['dpt3D'], data_2['dpt3D']])
-                self.data['com'] = np.concatenate([data_1['com'], data_2['com']])
-                self.data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
-                self.data['config'] = np.concatenate([data_1['config'], data_2['config']])
-                self.data['joint'] = np.concatenate([data_1['joint'], data_2['joint']])
-
+                data['depth'] = np.concatenate([data_1['depth'], data_2['depth']])
+                data['dpt3D'] = np.concatenate([data_1['dpt3D'], data_2['dpt3D']])
+                data['com'] = np.concatenate([data_1['com'], data_2['com']])
+                data['inds'] = np.concatenate([data_1['inds'], data_2['inds']])
+                data['config'] = np.concatenate([data_1['config'], data_2['config']])
+                data['joint'] = np.concatenate([data_1['joint'], data_2['joint']])
         else:
             raise Exception('unknow dataset {} or phase {}.'.format(self.name, self.phase))
 
-        return self.data
-
-
-    def dataToSeq(self):
-        """
-        Transform the dataset into sequence
-        :return: sequence of frames
-        """
-        dataSize = self.data['inds'].shape[0]
-        self.seqSize = int(np.ceil(dataSize / float(self.clip_length)))
-        seq = []
-        for i in xrange(self.seqSize):
-            current_seq = []
-            for j in xrange(self.clip_length):
-                ind = i * self.clip_length + j
-                if ind >= dataSize:
-                    tmp = current_seq[-1]
-                else:
-                    tmp = {'depth': self.data['depth'][ind],
-                           'dpt3D': self.data['dpt3D'][ind],
-                           'com': self.data['com'][ind],
-                           'inds': self.data['inds'][ind],
-                           'joint': self.data['joint'][ind],
-                           'config': self.data['config'][ind],
-                           'clip_markers': 1 if j != 0 else 0}
-                current_seq.append(tmp.copy())
-            seq.append(current_seq)
-
-        return seq
-
+        return data
 
 class sequenceGenerator(object):
-    def __init__(self, buffer_size, clip_length, num_seq, seq_dict):
+    def __init__(self, buffer_size, frame_size, dataSize, data, shuffle):
         """
         :param buffer_size:
-        :param clip_length:
+        :param frame_size:
         :param num_seq:
         :param seq_dict:
         """
         self.buffer_size = buffer_size
-        self.clip_length = clip_length
-        self.N = self.buffer_size*self.clip_length
-        self.num_seq = num_seq
+        self.frame_size = frame_size
+        self.dataSize = dataSize
         self.idx = 0
-        self.seq_dict = np.array(seq_dict)
+        self.data = data
+        self.shuffle = shuffle
 
     def __call__(self):
         """
         :return:
         """
-
-        if self.idx + self.buffer_size >= self.num_seq:
-            idx_list = range(self.idx, self.num_seq)
-            idx_list.extend(range(0, self.buffer_size - (self.num_seq - self.idx)))
+        batch = []
+        if self.shuffle:
+            # random choice index for training
+            # get the start idx for lstm
+            idx_list = np.random.choice(range(0, self.dataSize-self.frame_size+1), self.buffer_size)
+            for idx in idx_list:
+                minibatch = []
+                start = idx
+                end = idx + self.frame_size
+                for i in xrange(start, end):
+                    minibatch.append({'depth': self.data['depth'][i],
+                                      'dpt3D': self.data['dpt3D'][i],
+                                      'com': self.data['com'][i],
+                                      'inds': self.data['inds'][i],
+                                      'joint': self.data['joint'][i],
+                                      'config': self.data['config'][i],
+                                      'clip_markers': 1 if i!=start else 0})
+                batch.append(minibatch)
         else:
-            idx_list = range(self.idx, self.idx + self.buffer_size)
+            # start from 0, without overlap between two batches
+            if self.idx + self.buffer_size * self.frame_size > self.dataSize:
+                idx_list = range(self.idx, self.dataSize, self.frame_size)
+                while len(idx_list) != self.buffer_size: 
+                    idx_list.append(idx_list[-1])
+            else:
+                idx_list = range(self.idx, self.idx + self.buffer_size*self.frame_size, self.frame_size)
+            self.idx += self.buffer_size * self.frame_size
+            if self.idx >= self.dataSize:
+                self.idx = 0
 
-        self.idx += self.buffer_size
-        if self.idx >= self.num_seq:
-            self.idx = self.idx - self.num_seq
+            for idx in idx_list: 
+                minibatch = []
+                start = idx
+                end = idx + self.frame_size
+                for i in xrange(start, end):
+                    if i < self.dataSize:
+                        temp = {'depth': self.data['depth'][i],
+                                'dpt3D': self.data['dpt3D'][i],
+                                'com': self.data['com'][i],
+                                'inds': self.data['inds'][i],
+                                'joint': self.data['joint'][i],
+                                'config': self.data['config'][i],
+                                'clip_markers': 1 if i!=start else 0}
+                    minibatch.append(temp)
+                batch.append(minibatch)
 
-        #print('index list = ', idx_list)
-        return self.seq_dict[idx_list]
-
+        return batch
 
 class videoRead(caffe.Layer):
 
     def initialize(self):
         """set the defualt param, overwrite it"""
         self.name = 'NYU'
-        self.train_or_test = 'test'
-        self.N = self.buffer_size * self.frames
+        self.phase = 'test'
+        self.N = self.buffer_size * self.frame_size
         self.idx = 0
         self.path = cachePath
         self.joints = 14
@@ -203,18 +202,17 @@ class videoRead(caffe.Layer):
         layer_params = yaml.load(self.param_str)
         # read the layer param contain the sequence number and sequence size
         self.buffer_size = int(layer_params['buffer_size'])
-        self.frames = int(layer_params['frame_size'])
-        self.baseline = (layer_params['baseline'] == "true")
+        self.frame_size = int(layer_params['frame_size'])
+        self.aug = (layer_params['augment'] == "true") # whether we do augmentation, only in NYU dataset
+        self.shuffle = (layer_params['shuffle'] == "true")
         self.imagesize = int(layer_params['size'])
         self.initialize()
 
-        dataReader = DataRead(self.name, self.train_or_test, self.path, self.frames, \
-                              self.dim, dsize=(self.imagesize, self.imagesize), baseline=self.baseline)
-        dataReader.loadData()
-        self.seq_dict = dataReader.dataToSeq()
-
-        self.sequence_generator = sequenceGenerator(self.buffer_size, self.frames,\
-                                                   len(self.seq_dict), self.seq_dict)
+        dataReader = DataRead(self.name, self.phase, self.path, self.dim, \
+                              dsize=(self.imagesize, self.imagesize), aug=self.aug)
+        self.data = dataReader.loadData()
+        self.sequence_generator = sequenceGenerator(self.buffer_size, self.frame_size,\
+                                                   len(self.data['depth']), self.data, self.shuffle)
 
         self.top_names = ['depth', 'dpt3D', 'joint', 'clip_markers', 'com', 'config', 'inds']
         print 'Outputs: ', self.top_names
@@ -225,7 +223,7 @@ class videoRead(caffe.Layer):
         if DEBUG:
             print "configuration: "
             print "dataset = {}, phase = {}".format(self.name, self.train_or_test)
-            print "buffer_size = {}, frame_size = {}".format(self.buffer_size, self.frames)
+            print "buffer_size = {}, frame_size = {}".format(self.buffer_size, self.frame_size)
             print "image_size = {}".format(self.imagesize)
 
         for top_index, name in enumerate(self.top_names):
@@ -260,7 +258,7 @@ class videoRead(caffe.Layer):
         inds = np.zeros((self.N))
 
         # rearrange the dataset for LSTM
-        for i in xrange(self.frames):
+        for i in xrange(self.frame_size):
             for j in xrange(self.buffer_size):
                 idx = i*self.buffer_size + j
                 depth[idx] = data[j][i]['depth']
@@ -308,9 +306,8 @@ class videoRead(caffe.Layer):
 class NYUTrainSeq(videoRead):
     def initialize(self):
         self.name = 'NYU'
-        self.train_or_test = 'train'
-        self.N = self.buffer_size*self.frames
-        self.idx = 0
+        self.phase = 'train'
+        self.N = self.buffer_size*self.frame_size
         self.path = cachePath
         self.joints = 14
         self.dim = 3
@@ -318,9 +315,8 @@ class NYUTrainSeq(videoRead):
 class NYUTestSeq(videoRead):
     def initialize(self):
         self.name = 'NYU'
-        self.train_or_test = 'test'
-        self.N = self.buffer_size*self.frames
-        self.idx = 0
+        self.phase = 'test'
+        self.N = self.buffer_size*self.frame_size
         self.path = cachePath
         self.joints = 14
         self.dim = 3
@@ -328,9 +324,8 @@ class NYUTestSeq(videoRead):
 class ICVLTrainSeq(videoRead):
     def initialize(self):
         self.name = 'ICVL'
-        self.train_or_test = 'train'
-        self.N = self.buffer_size*self.frames
-        self.idx = 0
+        self.phase = 'train'
+        self.N = self.buffer_size*self.frame_size
         self.path = cachePath
         self.joints = 16
         self.dim = 3
@@ -338,8 +333,8 @@ class ICVLTrainSeq(videoRead):
 class ICVLTestSeq(videoRead):
     def initialize(self):
         self.name = 'ICVL'
-        self.train_or_test = 'test'
-        self.N = self.buffer_size*self.frames
+        self.phase = 'test'
+        self.N = self.buffer_size*self.frame_size
         self.idx = 0
         self.path = cachePath
         self.joints = 16
@@ -347,11 +342,18 @@ class ICVLTestSeq(videoRead):
 
 
 if __name__ == '__main__':
-    pass
     # data = DataRead(name='NYU', phase='train',dsize=(128, 128))
     # data_load = data.loadData()
-    # data = DataRead(name='NYU', phase='test', dsize=(128, 128))
-    # data_load = data.loadData()
+    # sequence_generator = sequenceGenerator(128, 1, len(data_load), data_load, True)
+    # for i in range(10):
+    #     batch = sequence_generator()
+
+
+    data = DataRead(name='NYU', phase='test', dsize=(128, 128))
+    data_load = data.loadData()
+    sequence_generator = sequenceGenerator(128, 1, len(data_load['depth']), data_load, False)
+    for i in range(10):
+        batch = sequence_generator()
     # data = DataRead(name='ICVL', phase='train',dsize=(128, 128))
     # data_load = data.loadData()
     # data = DataRead(name='ICVL', phase='test', dsize=(128, 128))

@@ -13,7 +13,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTrainSeq"
-        param_str: '{"buffer_size": "8", "frame_size": "16", "baseline": "false", "size": "128"}'
+        param_str: '{"buffer_size": "8", "frame_size": "16", "augment": "false", "shuffle": "true", "size": "128"}'
     }
     include: {
         phase: TRAIN
@@ -32,7 +32,7 @@ layer {
     python_param {
         module: "data_input_layer"
         layer: "NYUTestSeq"
-        param_str: '{"buffer_size": "1", "frame_size": "16", "baseline": "false", "size": "128"}'
+        param_str: '{"buffer_size": "1", "frame_size": "16", "augment": "false", "shuffle": "false", "size": "128"}'
     }
     include: {
         phase: TEST
@@ -45,11 +45,11 @@ layer {
   bottom: "depth"
   top: "convL1_baseline"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -87,11 +87,11 @@ layer {
   bottom: "poolL1_baseline"
   top: "convL2_baseline"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -129,11 +129,11 @@ layer {
   bottom: "poolL2_baseline"
   top: "convL3_baseline"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -171,11 +171,11 @@ layer {
   bottom: "poolL3_baseline"
   top: "FC1_baseline"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -235,11 +235,11 @@ layer {
   bottom: "reshape-cm"
   top: "lstm"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   recurrent_param {
@@ -318,11 +318,11 @@ layer {
   bottom: "depth"
   top: "convL1"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -360,11 +360,11 @@ layer {
   bottom: "poolL1"
   top: "convL2"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -402,11 +402,11 @@ layer {
   bottom: "poolL2"
   top: "convL3"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -445,11 +445,11 @@ layer {
   bottom: "dpt3D"
   top: "convL1_3x3"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -470,11 +470,11 @@ layer {
   bottom: "convL1_3x3"
   top: "convL1_1x1"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -511,11 +511,11 @@ layer {
   bottom: "poolL1_3D"
   top: "convL2_3x3"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -536,11 +536,11 @@ layer {
   bottom: "convL2_3x3"
   top: "convL2_1x1"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -577,11 +577,11 @@ layer {
   bottom: "poolL2_3D"
   top: "convL3_3x3"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -602,11 +602,11 @@ layer {
   bottom: "convL3_3x3"
   top: "convL3_1x1"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -657,12 +657,12 @@ layer {
   top: "FC1"
   param {
     name: "FC1_w"
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
     name: "FC1_b"
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -697,12 +697,12 @@ layer {
   top: "FC1_3D"
   param {
     name: "FC1_3D_w"
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
     name: "FC1_3D_b"
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -749,12 +749,12 @@ layer {
   top: "FC2"
   param {
     name: "FC2_w"
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
     name: "FC2_b"
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -789,12 +789,12 @@ layer {
   top: "FC2_3D"
   param {
     name: "FC2_3D_w"
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
     name: "FC2_3D_b"
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -1118,7 +1118,7 @@ layer {
   bottom: "joint_pred_lstm"
   bottom: "joint"
   top: "vis_loss_lstm"
-  loss_weight: 0
+  loss_weight: 1
 }
 layer {
   name: "vis_loss_3D"
@@ -1126,5 +1126,5 @@ layer {
   bottom: "joint_pred_depth_3D"
   bottom: "joint"
   top: "vis_loss_3D"
-  loss_weight: 0
+  loss_weight: 1
 }

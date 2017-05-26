@@ -16,5 +16,5 @@ exec &> >(tee -a "$LOG_FILE")
 echo Logging to "$LOG_FILE"
 
 $TOOL/caffe train -solver $MODELS/solver_hand_3D_and_depth.prototxt \
-                  -weights $CAFFEMODEL/hand_depth/hand_depth_iter_100000.caffemodel,$CAFFEMODEL/hand_3D/hand_3D_iter_100000.caffemodel \
-                  -gpu 1
+                  -gpu 1 \
+#                  -weights $CAFFEMODEL/hand_depth/hand_depth_iter_100000.caffemodel,$CAFFEMODEL/hand_3D/hand_3D_iter_100000.caffemodel \

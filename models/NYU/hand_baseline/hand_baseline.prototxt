@@ -13,7 +13,7 @@ layer {
   python_param {
     module: "data_input_layer"
     layer: "NYUTrainSeq"
-    param_str: '{"buffer_size": "128", "frame_size": "1", "baseline": "true", "size": "128"}'
+    param_str: '{"buffer_size": "128", "frame_size": "1", "augment": "true", "shuffle":"true", "size": "128"}'
   }
   include: {
     phase: TRAIN
@@ -32,7 +32,7 @@ layer {
   python_param {
     module: "data_input_layer"
     layer: "NYUTestSeq"
-    param_str: '{"buffer_size": "64", "frame_size": "1", "baseline": "true", "size": "128"}'
+    param_str: '{"buffer_size": "64", "frame_size": "1", "augment": "false", "shuffle":"false", "size": "128"}'
   }
   include: {
     phase: TEST
