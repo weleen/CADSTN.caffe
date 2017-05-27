@@ -85,10 +85,16 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
     if 'baseline' in model_name:
         frame_size, joint_size = net.blobs['joint_pred_baseline'].data.shape
         seq_size = 1
+    elif '3D' in model_name:
+        if '3D_and_depth' in model_name:
+            frame_size, joint_size = net.blobs['joint_pred_depth_3D'].data.shape
+        else:
+            frame_size, joint_size = net.blobs['joint_pred_3D'].data.shape
+        seq_size = 1
     elif 'mix' in model_name:
         frame_size, joint_size = net.blobs['joint_pred_mix'].data.shape
         seq_size = 1
-    else:
+    else: # lstm
         frame_size, seq_size, joint_size = net.blobs['pred_joint_lstm'].data.shape
     dim = 3 # estimate 3 dimension x, y and z
 
@@ -129,6 +135,13 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
             col = j % seq_size
             if 'baseline' in model_name:
                 predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_baseline'].data[j].reshape(joint_size / dim, dim) * \
+                                                      net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
+            elif '3D' in model_name:
+                if '3D_and_depth' in model_name:
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_depth_3D'].data[j].reshape(joint_size / dim, dim) * \
+                                                      net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
+                else:
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_3D'].data[j].reshape(joint_size / dim, dim) * \
                                                       net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
             elif 'mix' in model_name:
                 predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_mix'].data[j].reshape(joint_size / dim, dim) * \
@@ -175,14 +188,11 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model.append(('baseline','100000')) # 20.9392899563mm
-    #model.append(('baseline_concate_features', '200000'))
-    #model.append(('baseline_msra', '300000'))
-    #model.append(('lstm','100000')) # 13 20.9442366067mm 15 20.9589169614mm
-    #model.append(('lstm_no_concate','200000')) # 15 21.044357862mm 18 21.0315737845mm
-    #model.append(('bidirectional_lstm','190000'))
-    #model.append(('bidirectional_lstm_no_concate', '200000'))
-    #model.append(('mix', '100000'))
+    model.append(('baseline','100000'))
+    model.append(('3D', '100000'))
+    model.append(('3D_and_depth', '100000')) 
+    model.append(('lstm','100000')) 
+    model.append(('mix', '100000'))
     for ind in xrange(len(model)):
         joints, file_name= predictJoints(model[ind])
 
