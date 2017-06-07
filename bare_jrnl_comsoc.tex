@@ -1,0 +1,375 @@
+\documentclass[journal,comsoc]{IEEEtran}
+\usepackage[T1]{fontenc}% optional T1 font encoding
+
+\usepackage{ifpdf}
+\usepackage{cite}
+\ifCLASSINFOpdf
+  \usepackage[pdftex]{graphicx}
+\else
+  \usepackage[dvips]{graphicx}
+\fi
+\usepackage{amsmath}
+\interdisplaylinepenalty=2500
+\usepackage[cmintegrals]{newtxmath}
+\usepackage{bm}
+\usepackage{algorithmic}
+\usepackage{array}
+\ifCLASSOPTIONcompsoc
+  \usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\else
+  \usepackage[caption=false,font=footnotesize]{subfig}
+\fi
+%\usepackage{fixltx2e}
+%\usepackage{stfloats}
+\ifCLASSOPTIONcaptionsoff
+  \usepackage[nomarkers]{endfloat}
+ \let\MYoriglatexcaption\caption
+ \renewcommand{\caption}[2][\relax]{\MYoriglatexcaption[#2]{#2}}
+\fi
+\usepackage{url}
+\usepackage{hyperref}
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+
+\begin{document}
+\title{Temporal-Spatial Depth Map Based Hand Pose Estimation}
+
+\author{{Anonymous}% <-this % stops a space
+\thanks{Anonymous}}
+
+% The paper headers
+\markboth{Journal of \LaTeX\ Class Files,~Vol.~14, No.~8, August~2015}%
+{Shell \MakeLowercase{\textit{et al.}}: Bare Demo of IEEEtran.cls for IEEE Communications Society Journals}
+
+% make the title area
+\maketitle
+
+\begin{abstract}
+Abstract
+\end{abstract}
+
+% Note that keywords are not normally used for peerreview papers.
+\begin{IEEEkeywords}
+Hand pose estimation, LSTM, mixture of experts.
+\end{IEEEkeywords}
+
+
+% For peer review papers, you can put extra information on the cover
+% page as needed:
+\ifCLASSOPTIONpeerreview
+\begin{center} \bfseries EDICS Category: 3-BBND \end{center}
+\fi
+%
+% For peerreview papers, this IEEEtran command inserts a page break and
+% creates the second title. It will be ignored for other modes.
+\IEEEpeerreviewmaketitle
+
+
+
+\section{Introduction}\label{sec:introduction}
+\IEEEPARstart{H}{and} pose estimation plays an important role in application of human-computer interface(HCI) and augmentation reality(AR).
+So far, there are a plenty of researches on this topic\cite{guo2017region}, but it is still challenge to estimate hand pose in the actual scene
+owing to the large view variance, high joint flexibility, poor depth quality, severe self-occlusion and similar part confusion.
+
+We summary our contribution in the following two folds:
+\begin{itemize}
+  \item
+  We integrate features from depth map and 3D volumetric representation for hand pose estimation. 
+  The experiment reveals that 3D volumetric representation helps the hand structure.
+  \item
+  To our knowledge, it is the first time to consider temporal context in hand pose estimation. 
+  We model the coherence among frames by LSTM, and implement a hand pose estimation system with an eye to accuracy, 
+  efficiency, robustness and stability simultaneously.
+  \item
+  We evaluate our approach on two open datasets( e.g. NYU and ICVL), and get the comparable results.
+\end{itemize}
+
+% needed in second column of first page if using \IEEEpubid
+%\IEEEpubidadjcol
+
+%-------------------------------------------------------------------------
+\section{Related Work}\label{sec:related work}
+\subsection{Mixture of Experts}
+\subsection{Hand Pose Estimation}
+
+
+%------------------------------------------------------------------------
+\section{Our Method}\label{sec:our method}
+% prepare the notation for problem
+Our objective is to predict the 3D hand joint locations from a depth image, the locations are represented as a set of keypoints. 
+We give some notations about the problem. We denote a sequence of depth images as $\mathcal{I}=\{I_t\}_{t=1}^T$, 
+and the corresponding hand poses are $\mathcal{P}=\{P_t\}_{t=1}^T$. $P_t$ is the pose of hand in the form of $n$ 
+hand joints of its joints $P_t=\{j_i\}_i^n$ with $j_i=(x_i,y_i,z_i)$ from the depth image $I_t$.
+
+In the following, we describe our method for regressing the 3D hand pose. Figure~\ref{fig:architecture} shows the total 
+architecture for joints prediction. Aspired by Mixture of Experts~\cite{jacobs1991adaptive}, using a gated network to 
+control two expert networks. In general, network is composed of two parts: gated network and expert networks. 
+Each experts predicts the 3D pose given the input, gated network weights the prediction by each experts. 
+The experts concentrate on different information. LSTM-CNN takes temporal context into account between the consecutive frames. 
+Fusion-CNN, thinking over spatial information, fuses the features from depth map and 3D volumetric representation.
+The LSTM-CNN and Fusion-CNN we employ are discussed in Section~\ref{sec:lstm netowork} and Section~\ref{sec:fusion network}. 
+And the mixture of experts are discussed in Section~\ref{sec:gated network}.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=1\linewidth]{src/network/architecture.pdf}
+    \caption{The overview of architecture. The red branch is the gated network, the blue branch is the expert network. 
+    Each experts predicts the 3D pose given the input, gated network weights the prediction by each experts.}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{LSTM Based Network}\label{sec:lstm netowork}
+As we know, the hand poses between frames are correlated(e.g. when grabbing, the joints on fingers are most likely to be closer). 
+However, there are no approaches considering the coherence of successive frames in hand pose estimation.
+
+Currently, an Recurrent Neural Network(RNN) with Long Short-Term Memory(LSTM) units~\cite{zaremba2014learning} is widely used 
+because they are expressive and easy to train. The LSTM network is mostly used for modeling the long term temporal correspondence. 
+As the architecture in Fig~\ref{fig:lstm network}. The input is a successive sequence of frames. 
+Based on a simple baseline network shown in Fig~\ref{fig:baseline network}, we replace the last fully connected layer as an LSTM. 
+To reserve the features from previous layer, we concatenate features from first fully connected layer and LSTM, and regress hand joint locations.
+
+\begin{figure*}[t]
+    \centering
+    \subfloat[Baseline Network.]{
+        \label{fig:baseline network}
+        \begin{minipage}[t]{240pt}
+            \centering
+            \includegraphics[width=0.805\linewidth]{src/network/baseline.pdf}
+        \end{minipage}
+    }
+    \subfloat[LSTM CNN.]{
+        \label{fig:lstm network}
+        \begin{minipage}[t]{240pt}
+            \includegraphics[width=1\linewidth]{src/network/lstm.pdf}
+        \end{minipage}
+    }
+\caption{Baseline and LSTM-CNN network. Regressing the hand joint location in 3D.}
+\label{fig:baseline and lstm network}
+\end{figure*}
+
+
+\subsection{Fusion Network}\label{sec:fusion network}
+According to the discussion in \cite{supancic2015depth} and \cite{deng2017hand3d}, a 3D volumetric representation helps the hand pose estimation. 
+So we project the hand in 2D depth map into 3D space, a bit difference is we slice the space into 8 layers, as shown in \ref{fig:fusion network}. 
+The 3D volumetric representation keep the structure of hand, we can clearly find all finger tips in the first layer.
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=1\linewidth]{src/network/fusion.pdf}
+    \caption{Fusion Network}
+\label{fig:fusion network}
+\end{figure*}
+
+\subsection{Gated Network}\label{sec:gated network}
+Gated Network weights the prediction from two experts.
+
+%\begin{figure}[t]
+%    \centering
+%    \includegraphics[width=1\linewidth]{}
+%    \caption{Gated Network}
+%\label{fig:gated network}
+%\end{figure}
+
+
+%-------------------------------------------------------------------------
+\section{Experiments}\label{sec:experiments}
+Our experiments
+\section{Conclusion}\label{sec:conclusion}
+The conclusion goes here.
+
+% An example of a floating figure using the graphicx package.
+% Note that \label must occur AFTER (or within) \caption.
+% For figures, \caption should occur after the \includegraphics.
+% Note that IEEEtran v1.7 and later has special internal code that
+% is designed to preserve the operation of \label within \caption
+% even when the captionsoff option is in effect. However, because
+% of issues like this, it may be the safest practice to put all your
+% \label just after \caption rather than within \caption{}.
+%
+% Reminder: the "draftcls" or "draftclsnofoot", not "draft", class
+% option should be used if it is desired that the figures are to be
+% displayed while in draft mode.
+%
+%\begin{figure}[!t]
+%\centering
+%\includegraphics[width=2.5in]{myfigure}
+% where an .eps filename suffix will be assumed under latex,
+% and a .pdf suffix will be assumed for pdflatex; or what has been declared
+% via \DeclareGraphicsExtensions.
+%\caption{Simulation results for the network.}
+%\label{fig_sim}
+%\end{figure}
+
+% Note that the IEEE typically puts floats only at the top, even when this
+% results in a large percentage of a column being occupied by floats.
+
+
+% An example of a double column floating figure using two subfigures.
+% (The subfig.sty package must be loaded for this to work.)
+% The subfigure \label commands are set within each subfloat command,
+% and the \label for the overall figure must come after \caption.
+% \hfil is used as a separator to get equal spacing.
+% Watch out that the combined width of all the subfigures on a
+% line do not exceed the text width or a line break will occur.
+%
+%\begin{figure*}[!t]
+%\centering
+%\subfloat[Case I]{\includegraphics[width=2.5in]{box}%
+%\label{fig_first_case}}
+%\hfil
+%\subfloat[Case II]{\includegraphics[width=2.5in]{box}%
+%\label{fig_second_case}}
+%\caption{Simulation results for the network.}
+%\label{fig_sim}
+%\end{figure*}
+%
+% Note that often IEEE papers with subfigures do not employ subfigure
+% captions (using the optional argument to \subfloat[]), but instead will
+% reference/describe all of them (a), (b), etc., within the main caption.
+% Be aware that for subfig.sty to generate the (a), (b), etc., subfigure
+% labels, the optional argument to \subfloat must be present. If a
+% subcaption is not desired, just leave its contents blank,
+% e.g., \subfloat[].
+
+
+% An example of a floating table. Note that, for IEEE style tables, the
+% \caption command should come BEFORE the table and, given that table
+% captions serve much like titles, are usually capitalized except for words
+% such as a, an, and, as, at, but, by, for, in, nor, of, on, or, the, to
+% and up, which are usually not capitalized unless they are the first or
+% last word of the caption. Table text will default to \footnotesize as
+% the IEEE normally uses this smaller font for tables.
+% The \label must come after \caption as always.
+%
+%\begin{table}[!t]
+%% increase table row spacing, adjust to taste
+%\renewcommand{\arraystretch}{1.3}
+% if using array.sty, it might be a good idea to tweak the value of
+% \extrarowheight as needed to properly center the text within the cells
+%\caption{An Example of a Table}
+%\label{table_example}
+%\centering
+%% Some packages, such as MDW tools, offer better commands for making tables
+%% than the plain LaTeX2e tabular which is used here.
+%\begin{tabular}{|c||c|}
+%\hline
+%One & Two\\
+%\hline
+%Three & Four\\
+%\hline
+%\end{tabular}
+%\end{table}
+
+
+% Note that the IEEE does not put floats in the very first column
+% - or typically anywhere on the first page for that matter. Also,
+% in-text middle ("here") positioning is typically not used, but it
+% is allowed and encouraged for Computer Society conferences (but
+% not Computer Society journals). Most IEEE journals/conferences use
+% top floats exclusively.
+% Note that, LaTeX2e, unlike IEEE journals/conferences, places
+% footnotes above bottom floats. This can be corrected via the
+% \fnbelowfloat command of the stfloats package.
+
+% if have a single appendix:
+%\appendix[Proof of the Zonklar Equations]
+% or
+%\appendix  % for no appendix heading
+% do not use \section anymore after \appendix, only \section*
+% is possibly needed
+
+% use appendices with more than one appendix
+% then use \section to start each appendix
+% you must declare a \section before using any
+% \subsection or using \label (\appendices by itself
+% starts a section numbered zero.)
+%
+
+
+\appendices
+\section{Proof of the First Zonklar Equation}
+Appendix one text goes here.
+
+% you can choose not to have a title for an appendix
+% if you want by leaving the argument blank
+\section{}
+Appendix two text goes here.
+
+
+% use section* for acknowledgment
+\section*{Acknowledgment}
+
+
+The authors would like to thank...
+
+
+% Can use something like this to put references on a page
+% by themselves when using endfloat and the captionsoff option.
+\ifCLASSOPTIONcaptionsoff
+  \newpage
+\fi
+
+
+
+% trigger a \newpage just before the given reference
+% number - used to balance the columns on the last page
+% adjust value as needed - may need to be readjusted if
+% the document is modified later
+%\IEEEtriggeratref{8}
+% The "triggered" command can be changed if desired:
+%\IEEEtriggercmd{\enlargethispage{-5in}}
+
+% references section
+
+% can use a bibliography generated by BibTeX as a .bbl file
+% BibTeX documentation can be easily obtained at:
+% http://mirror.ctan.org/biblio/bibtex/contrib/doc/
+% The IEEEtran BibTeX style support page is at:
+% http://www.michaelshell.org/tex/ieeetran/bibtex/
+%\bibliographystyle{IEEEtran}
+% argument is your BibTeX string definitions and bibliography database(s)
+%\bibliography{IEEEabrv,../bib/paper}
+%
+% <OR> manually copy in the resultant .bbl file
+% set second argument of \begin to the number of references
+% (used to reserve space for the reference number labels box)
+\bibliography{wu}
+\bibliographystyle{IEEEtran}
+
+% biography section
+%
+% If you have an EPS/PDF photo (graphicx package needed) extra braces are
+% needed around the contents of the optional argument to biography to prevent
+% the LaTeX parser from getting confused when it sees the complicated
+% \includegraphics command within an optional argument. (You could create
+% your own custom macro containing the \includegraphics command to make things
+% simpler here.)
+%\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{mshell}}]{Michael Shell}
+% or if you just want to reserve a space for a photo:
+
+% insert where needed to balance the two columns on the last page with
+% biographies
+%\newpage
+
+%\begin{IEEEbiographynophoto}{Jane Doe}
+%Biography text here.
+%\end{IEEEbiographynophoto}
+
+% You can push biographies down or up by placing
+% a \vfill before or after them. The appropriate
+% use of \vfill depends on what kind of text is
+% on the last page and whether or not the columns
+% are being equalized.
+
+%\vfill
+
+% Can be used to pull up biographies so that the bottom of the last one
+% is flush with the other column.
+%\enlargethispage{-5in}
+
+
+
+% that's all folks
+\end{document}
+
+
