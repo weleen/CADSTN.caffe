@@ -1,12 +1,12 @@
 *.aux
 *.bbl
-bare_jrnl_comsoc.blg
 *.log
-bare_jrnl_comsoc.pdf
 *.gz
-bare_jrnl_comsoc.tex.bak
 *.sav
-changelog.txt
 *.pdf
-src/Thumbs.db
 *.db
+*.bak
+changelog.txt
+bare_jrnl_comsoc.pdf
+bare_jrnl_comsoc.blg
+bare_jrnl_comsoc.out
