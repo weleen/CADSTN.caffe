@@ -1,7 +1,7 @@
 test_iter: 44
 test_interval: 1000
-net: "models/ICVL/hand_3D_and_depth_lstm/hand_3D_and_depth_lstm.prototxt"
-base_lr: 1e-4
+net: "models/ICVL/hand_mix/hand_mix.prototxt"
+base_lr: 1e-3
 momentum: 0.9
 momentum2: 0.999
 lr_policy: "step"
@@ -9,9 +9,9 @@ stepsize: 20000
 gamma: 0.1
 power: 0.75
 display: 500
-max_iter: 200000
+max_iter: 100000
 snapshot: 10000
 weight_decay: 0.0005
-snapshot_prefix: "weights/ICVL/hand_3D_and_depth_lstm/hand_3D_and_depth_lstm"
+snapshot_prefix: "weights/ICVL/hand_mix/hand_mix"
 type: "Adam"
 solver_mode: GPU

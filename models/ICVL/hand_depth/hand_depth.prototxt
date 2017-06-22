@@ -1,114 +1,48 @@
-name: "baseline-huber-loss"
+name: "depth"
 
 layer {
-    name: "data"
-    type: "Python"
-    top: "depth"
-    top: "joint"
-    top: "clip_markers"
-    top: "com"
-    top: "config"
-    top: "inds"
-    top: "clip_markers2"
-    python_param {
-        module: "data_input_layer"
-        layer: "NYUTrainSeq"
-        param_str: '{"buffer_size": "512", "frame_size": "1", "baseline": "true", "size": "128"}'
-    }
-    include: {
-        phase: TRAIN
-    }
+  name: "data"
+  type: "Python"
+  top: "depth"
+  top: "dpt3D"
+  top: "joint"
+  top: "clip_markers"
+  top: "com"
+  top: "config"
+  top: "inds"
+  python_param {
+    module: "data_input_layer"
+    layer: "ICVLTrainSeq"
+    param_str: '{"buffer_size": "128", "frame_size": "1", "baseline": "true", "size": "128"}'
+  }
+  include: {
+    phase: TRAIN
+  }
 }
-
 layer {
-    name: "data"
-    type: "Python"
-    top: "depth"
-    top: "joint"
-    top: "clip_markers"
-    top: "com"
-    top: "config"
-    top: "inds"
-    top: "clip_markers2"
-    python_param {
-        module: "data_input_layer"
-        layer: "NYUTestSeq"
-        param_str: '{"buffer_size": "64", "frame_size": "1", "baseline": "true", "size": "128"}'
-    }
-    include: {
-        phase: TEST
-    }
+  name: "data"
+  type: "Python"
+  top: "depth"
+  top: "dpt3D"
+  top: "joint"
+  top: "clip_markers"
+  top: "com"
+  top: "config"
+  top: "inds"
+  python_param {
+    module: "data_input_layer"
+    layer: "ICVLTestSeq"
+    param_str: '{"buffer_size": "64", "frame_size": "1", "baseline": "true", "size": "128"}'
+  }
+  include: {
+    phase: TEST
+  }
 }
-
 layer {
   name: "convL1"
   type: "Convolution"
   bottom: "depth"
   top: "convL1"
-  convolution_param {
-    num_output: 8
-    kernel_size: 3
-    pad: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-    }
-  }
-}
-
-layer {
-  name: "ReLUconvL1"
-  type: "ReLU"
-  bottom: "convL1"
-  top: "convL1"
-}
-
-
-layer {
-  name: "poolL1"
-  type: "Pooling"
-  bottom: "convL1"
-  top: "poolL1"
-  pooling_param {
-    pool: MAX
-    kernel_size: 4
-    stride: 4
-  }
-}
-
-layer {
-  name: "convL2"
-  type: "Convolution"
-  bottom: "poolL1"
-  top: "convL2"
-  convolution_param {
-    num_output: 16
-    kernel_size: 3
-    pad: 1
-    weight_filler {
-      type: "xavier"
-    }
-    bias_filler {
-      type: "constant"
-    }
-  }
-}
-
-layer {
-  name: "ReLUconvL2"
-  type: "ReLU"
-  bottom: "convL2"
-  top: "convL2"
-}
-
-
-layer {
-  name: "convL3"
-  type: "Convolution"
-  bottom: "convL2"
-  top: "convL3"
   convolution_param {
     num_output: 32
     kernel_size: 3
@@ -121,15 +55,80 @@ layer {
     }
   }
 }
-
+layer {
+  name: "ReLUconvL1"
+  type: "ReLU"
+  bottom: "convL1"
+  top: "convL1"
+}
+layer {
+  name: "poolL1"
+  type: "Pooling"
+  bottom: "convL1"
+  top: "poolL1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 4
+    stride: 4
+  }
+}
+layer {
+  name: "convL2"
+  type: "Convolution"
+  bottom: "poolL1"
+  top: "convL2"
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUconvL2"
+  type: "ReLU"
+  bottom: "convL2"
+  top: "convL2"
+}
+layer {
+  name: "poolL2"
+  type: "Pooling"
+  bottom: "convL2"
+  top: "poolL2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layer {
+  name: "convL3"
+  type: "Convolution"
+  bottom: "poolL2"
+  top: "convL3"
+  convolution_param {
+    num_output: 128
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
 layer {
   name: "ReLUconvL3"
   type: "ReLU"
   bottom: "convL3"
   top: "convL3"
 }
-
-
 layer {
   name: "poolL3"
   type: "Pooling"
@@ -141,7 +140,6 @@ layer {
     stride: 2
   }
 }
-
 layer {
   name: "FC1"
   type: "InnerProduct"
@@ -160,14 +158,12 @@ layer {
     }
   }
 }
-
 layer {
   name: "ReLUFC1"
   type: "ReLU"
   bottom: "FC1"
   top: "FC1"
 }
-
 layer {
   name: "DropoutFC1"
   type: "Dropout"
@@ -177,8 +173,6 @@ layer {
     dropout_ratio: 0.3
   }
 }
-
-
 layer {
   name: "FC2"
   type: "InnerProduct"
@@ -197,14 +191,12 @@ layer {
     }
   }
 }
-
 layer {
   name: "ReLUFC2"
   type: "ReLU"
   bottom: "FC2"
   top: "FC2"
 }
-
 layer {
   name: "DropoutFC2"
   type: "Dropout"
@@ -214,17 +206,16 @@ layer {
     dropout_ratio: 0.3
   }
 }
-
 layer {
-  name: "joint_pred"
+  name: "joint_pred_depth"
   type: "InnerProduct"
   bottom: "FC2"
-  top: "joint_pred"
+  top: "joint_pred_depth"
   param {
     lr_mult: 1
   }
   inner_product_param {
-    num_output: 42
+    num_output: 48
     weight_filler {
       type: "gaussian"
       std: 0.001
@@ -234,38 +225,20 @@ layer {
     }
   }
 }
-
-layer {
-  name: "reshape_joint"
-  type: "Reshape"
-  bottom: "joint"
-  top: "reshape_joint"
-  reshape_param {
-    shape {
-      dim: -1
-      dim: 42
-    }
-  }
-}
-
 layer {
 	name: "loss"
-	type: "SmoothL1Loss"
-	bottom: "joint_pred"
-	bottom: "reshape_joint"
+	type: "EuclideanLoss"
+	bottom: "joint_pred_depth"
+	bottom: "joint"
 	top: "loss"
-  smooth_l1_loss_param {
-    sigma: 10
-  }
 	loss_weight: 1
 }
-
 layer {
-	name: "ignore"
+  name: "ignore"
 	type: "Silence"
 	bottom: "inds"
+  bottom: "dpt3D"
 	bottom: "com"
 	bottom: "config"
 	bottom: "clip_markers"
-  bottom: "clip_markers2"
 }

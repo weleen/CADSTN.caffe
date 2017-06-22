@@ -12,8 +12,8 @@ layer {
     top: "inds"
     python_param {
         module: "data_input_layer"
-        layer: "NYUTrainSeq"
-        param_str: '{"buffer_size": "8", "frame_size": "16", "augment": "false", "shuffle": "true", "size": "128"}'
+        layer: "ICVLTrainSeq"
+        param_str: '{"buffer_size": "8", "frame_size": "16", "baseline": "false", "size": "128"}'
     }
     include: {
         phase: TRAIN
@@ -31,8 +31,8 @@ layer {
     top: "inds"
     python_param {
         module: "data_input_layer"
-        layer: "NYUTestSeq"
-        param_str: '{"buffer_size": "1", "frame_size": "16", "augment": "false", "shuffle": "false", "size": "128"}'
+        layer: "ICVLTestSeq"
+        param_str: '{"buffer_size": "1", "frame_size": "16", "baseline": "false", "size": "128"}'
     }
     include: {
         phase: TEST
@@ -288,7 +288,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 42
+    num_output: 48
     weight_filler {
       type: "xavier"
     }
@@ -306,7 +306,7 @@ layer {
   reshape_param {
     shape {
       dim: -1
-      dim: 42
+      dim: 48
     }
   }
 }
@@ -778,7 +778,7 @@ layer {
     decay_mult: 0
   }
   inner_product_param {
-    num_output: 42
+    num_output: 48
     weight_filler {
       type: "gaussian"
       std: 0.001
@@ -795,7 +795,7 @@ layer {
   bottom: "depth"
   top: "convL1_gate"
   convolution_param {
-    num_output: 64
+    num_output: 32
     kernel_size: 3
     pad: 1
     weight_filler {
@@ -829,7 +829,7 @@ layer {
   bottom: "poolL1_gate"
   top: "convL2_gate"
   convolution_param {
-    num_output: 128
+    num_output: 64
     kernel_size: 3
     pad: 1
     weight_filler {
@@ -863,7 +863,7 @@ layer {
   bottom: "poolL2_gate"
   top: "convL3_gate"
   convolution_param {
-    num_output: 256
+    num_output: 128
     kernel_size: 3
     pad: 1
     weight_filler {
@@ -969,7 +969,7 @@ layer {
   bottom: "FC2_gate"
   top: "gate"
   inner_product_param {
-    num_output: 84
+    num_output: 96
     weight_filler {
       type: "xavier"
     }
@@ -986,7 +986,7 @@ layer {
   top: "gate2"
   slice_param {
     axis: 1
-    slice_point: 42
+    slice_point: 48
   }
 }
 # prediction
