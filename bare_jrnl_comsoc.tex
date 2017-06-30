@@ -90,8 +90,9 @@ We summary our contribution in the following two folds:
 
 %-------------------------------------------------------------------------
 \section{Related Work}\label{sec:related work}
-\subsection{Mixture of Experts}
 \subsection{Hand Pose Estimation}
+\subsection{Mixture of Experts}
+\subsection{LSTM}
 
 
 %------------------------------------------------------------------------
@@ -103,7 +104,7 @@ and the corresponding hand poses are $\mathcal{P}=\{P_t\}_{t=1}^T$. $P_t$ is the
 hand joints of its joints $P_t=\{j_i\}_i^n$ with $j_i=(x_i,y_i,z_i)$ from the depth image $I_t$.
 
 In the following, we describe our method for regressing the 3D hand pose. Figure~\ref{fig:architecture} shows the total
-architecture for joints prediction. Aspired by Mixture of Experts~\cite{jacobs1991adaptive}, using a gated network to
+architecture for joints prediction. Aspired by Mixture of Experts~\cite{jacobs1991adaptive}, we use a gated network to
 control two expert networks. In general, network is composed of two parts: gated network and expert networks.
 Each experts predicts the 3D pose given the input, gated network weights the prediction by each experts.
 The experts concentrate on different information. LSTM-CNN takes temporal context into account between the consecutive frames.
@@ -114,8 +115,8 @@ And the mixture of experts are discussed in Section~\ref{sec:gated network}.
 \begin{figure}[t]
     \centering
     \includegraphics[width=1\linewidth]{src/network/architecture.pdf}
-    \caption{The overview of architecture. The red branch is the gated network, the blue branch is the expert network.
-    Each experts predicts the 3D pose given the input, gated network weights the prediction by each experts.}
+    \caption{The overview of architecture. The red branch is the gated network, the blue branch is the expert networks.
+    Each expert predicts the 3D pose given the input, gated network weights the prediction by each experts.}
 \label{fig:architecture}
 \end{figure}
 
@@ -127,7 +128,8 @@ Currently, an Recurrent Neural Network(RNN) with Long Short-Term Memory(LSTM) un
 because they are expressive and easy to train. The LSTM network is mostly used for modeling the long term temporal correspondence.
 As the architecture in Fig~\ref{fig:lstm network}. The input is a successive sequence of frames.
 Based on a simple baseline network shown in Fig~\ref{fig:baseline network}, we replace the last fully connected layer as an LSTM.
-To reserve the features from previous layer, we concatenate features from first fully connected layer and LSTM, and regress hand joint locations.
+To reserve the features from previous layer, we concatenate features from first fully connected layer and LSTM, and regress hand
+joint locations.
 
 \begin{figure*}[t]
     \centering
@@ -150,32 +152,15 @@ To reserve the features from previous layer, we concatenate features from first 
 
 
 \subsection{Fusion Network}\label{sec:fusion network}
-According to the discussion in \cite{supancic2015depth} and \cite{deng2017hand3d}, a 3D volumetric representation helps the hand pose estimation.
-So we project the hand in 2D depth map into 3D space, a bit difference is we slice the space into 8 layers, as shown in Fig.~\ref{fig:fusion network}.
-The 3D volumetric representation keep the structure of hand, we can clearly find all finger tips in the first layer. However, the 3D convolution
-is a high-cost manipulation for a real-time application, a straight-forward idea is simulation for 3D convolution. Hopf.etal\cite{hopf1999accelerating}
-combines a 2D convolution and a 1D convolution kernel to emulate a 3D separable convolution. Follow the notation in \cite{ji20133d}, the value at position $(x,y,z)$
-in the $j$th feature cube in the $i$th layer, which is denoted as $v_{ij}^{xyz}$, is given by:
-\begin{equation}\label{eq:3D convolution}
-v_{ij}^{xyz}=b_{ij} + \sum_{m}\sum_{p=0}^{P_i-1}\sum_{q=0}^{Q_i-1}\sum_{r=0}^{R_i-1} w_{ijm}^{pqr} v_{(i-1)m}^{(x+p)(y+q)(z+r)}
-\end{equation}
-where $b_{ij}$ is the bias for $j$th feature cube, $m$ is the index of the previous feature cube, $P_i, Q_i, R_i$ is the height and width yet depth of the kernel respectively,
-$w_{ijm}^{pqr}$ represents the value at position $(p, q, r)$ of the kernel connected to the $m$th feature cube. To speedup the convolution,
-with the assumption of separable kernel that $W^{pqr}_i = W^{pq}_{1i} W^{r}_{2i}$, where $W_i \in R^{P_i \times Q_i \times R_i}$, $W_{1i} \in R^{P_i \times Q_i}$
-and $W_{2i} \in R^{R_i}$, Eq.~\ref{eq:3D convolution} is equivalent to 2D convolution and 1D convolution:
-\begin{equation}\label{eq:3D to 2D and 1D}
-\begin{aligned}
-v_{ij}^{xyz}
-&=b_{ij} + \sum_{m}\sum_{p=0}^{P_i-1}\sum_{q=0}^{Q_i-1}\sum_{r=0}^{R_i-1} w_{ijm}^{pqr} v_{(i-1)m}^{(x+p)(y+q)(z+r)} \\
-&=b_{ij} + \sum_{r}^{R_i-1}w_{2ij}^{r}(\sum_{m}\sum_{p=0}^{P_i-1}\sum_{q=0}^{Q_i-1} w_{1ijm}^{pq} v_{(i-1)m}^{(x+p)(y+q)(z+r)}) \\
-&=b_{ij} + \sum_{r}^{R_i-1}w_{2ij}^{r} \hat{v}_{ij}^{xy(z+r)}
-\end{aligned}
-\end{equation}
-where $\hat{v}_{ij}^{xy(z+r)}$ is approximated by the grouped 2D convolution, and 1D convolution could be implemented by the 1x1 convolution.
+According to the discussion in \cite{supancic2015depth} and \cite{deng2017hand3d}, a 3D volumetric representation helps the hand
+pose estimation. So we project the hand in 2D depth map into 3D space, a bit difference is we slice the space into 8 layers,
+as shown in Fig.~\ref{fig:fusion network}. The 3D volumetric representation keep the structure of hand, we can clearly find all
+finger tips in the first layer.
 
-In our opinion, 3D convolution could grab the structure of hand, but it lacks the ability to estimate depth of hand joints. As shown in Fig.~\ref{fig:fusion network}, 
-we use a Deep-Fusion framework~\cite{chen2016multi} to fuse the features. In the fusion network, the different features are fused together hierarchically. 
-which could be expressed as: 
+In our opinion, the 3D volumetric representation is easier for constructing the hand structure, but it makes harder to estimate
+the depth of hand joints. To obtain the structure information and depth information simultaneously, we combine these two kinds
+of representation together. As shown in Fig.~\ref{fig:fusion network}, we deploy a Deep-Fusion framework~\cite{chen2016multi} to fuse
+the features. In the fusion network, the different features are fused together hierarchically. which could be expressed as:
 \begin{equation}\label{eq:deep fusion}
 \begin{aligned}
 &f_0 = f_{depth} \oplus f_{3D} \\
@@ -185,9 +170,9 @@ which could be expressed as:
 \end{equation}
 The $\oplus$ is element-wise mean, $\textbf{H}$ is the transformation for features, $l$ is the index for layer.
 
-What's more, to have a robust feature, we use an auxiliary loss as the regularization. In Fig.~\ref{fig:fusion network}, 
-the auxiliary path is useful only in training phase, and the layers connected by the blue dotted line share weights. 
-When training, the total losses are composed by three losses, i.e. three regression loss in different branch. 
+What's more, to have a robust feature, we use an auxiliary loss as the regularization. In Fig.~\ref{fig:fusion network},
+the auxiliary path is useful only in training phase, and the layers connected by the blue dotted line share weights.
+When training, the total losses are composed by three losses, i.e. three regression loss in different branch.
 When testing, the auxiliary pathes are removed.
 \begin{figure*}[t]
     \centering
@@ -197,7 +182,22 @@ When testing, the auxiliary pathes are removed.
 \end{figure*}
 
 \subsection{Gated Network}\label{sec:gated network}
-Gated Network weights the prediction from two experts.
+With two networks stand in the different view for estimating the joints, we want to ensemble their advantages for last prediction.
+Jacob. et al proposed Mixture of Experts(MoE)~\cite{jacobs1991adaptive} for adaptively integrating different regressors.
+
+Gated network weights two predictors, and give out the last prediction according to the weights of predictions as follow:
+\begin{equation}\label{eq:gated network}
+\centering
+\textbf{y} = \sum_{k=1}^K \textbf{g}_k \textbf{e}_k
+\end{equation}
+where $K$ is the number of experts, and $\textbf{e}_k$ is the output of $k$-th expert, $\textbf{g}_k$ is the $k$-th weight value of
+gated network. The prediction $\textbf{y}$ is estimated by weighted sum of each output $\textbf{e}_k$.
+
+Because LSTM-CNN network considers the temporal information and Fusion network extracts the spatial information, mixture of experts
+infer the hand joint location based on spatial-temporal features. Generally, gated network weight two predictions, it is more difficult
+than prediction job. Thus, we double the parameters in the gated network than the base network. And Dropout~\cite{srivastava2014dropout}
+is employed after the fully connected layer to prevent overfitting.
+
 
 %\begin{figure}[t]
 %    \centering
@@ -209,7 +209,19 @@ Gated Network weights the prediction from two experts.
 
 %-------------------------------------------------------------------------
 \section{Experiments}\label{sec:experiments}
-Our experiments
+In this section, we evaluate our approach on two public datasets, NYU~\cite{tompson2014real} and ICVL~\cite{tang2014latent}, for comparison 
+with state-of-the-art methods. NYU dataset is composed of 72757 training and 8252 testing images, whose resolution is 640x480. The dataset 
+is captured by PrimeSense, and the annotation is obtained by model-based tracking with a Particle Swarm Optimization processing. This dataset 
+is challenge because of its wider pose variation and noisy image yet some incorrect annotations. ICVL dataset is smaller than NYU dataset, contains 
+17604 frames for training and 1596 frames for testing. The image resolution is 320x240 and captured by Creative Interactive Gesture Camera. The scale 
+of image is small and the annotation accuracy is limited, these makes the estimation hard.
+
+\subsection{Evaluation}\label{sec:evaluation}
+The evaluation follows the standard metrics proposed in~\cite{tompson2014real}, including a plot of the percentage of test samples given a maximum distance from 
+ground truth and a mean distance from ground truth. 
+\subsection{Implementation Details}\label{sec:implementation}
+
+
 \section{Conclusion}\label{sec:conclusion}
 The conclusion goes here.
 
