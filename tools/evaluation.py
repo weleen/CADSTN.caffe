@@ -167,7 +167,8 @@ def predictJoints(model, store=True, dataset='NYU', gpu_or_cpu='gpu'):
 
 
 if __name__ == '__main__':
-
+    # ablation or comparison
+    ABLATION = False # ablation or comparison
     # test NYU dataset
     di = NYUImporter('../dataset/NYU/', cacheDir='../dataset/cache/')
     gt3D = []
@@ -188,11 +189,15 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model.append(('baseline','100000'))
-    model.append(('3D', '100000'))
-    model.append(('3D_and_depth', '100000')) 
-    model.append(('lstm','100000')) 
-    model.append(('mix', '100000'))
+    if ABLATION == True:
+        model.append(('baseline','100000'))
+        model.append(('3D', '100000'))
+        model.append(('3D_and_depth', '100000')) 
+        model.append(('lstm','100000')) 
+        model.append(('mix', '100000'))
+    else:
+        model.append(('mix', '100000'))
+
     for ind in xrange(len(model)):
         joints, file_name= predictJoints(model[ind])
 
@@ -219,16 +224,56 @@ if __name__ == '__main__':
     #################################
     # BASELINE
     # Load the evaluation
+    if ABLATION:
+        # plot list
+        plot_list = zip([i[0] for i in model], hpe)
 
-    data_baseline = di.loadBaseline('../dataset/NYU/test/test_predictions.mat', np.asarray(gt3D))
+        # plot ablation result
+        # NOTE: figure is in mix_100000 folder
+        hpe[-1].plotEvaluation('ablation', methodName='mix', baseline=plot_list[:-1])
+    else:
+        # plot list
+        plot_list = []
 
-    hpe_base = NYUHandposeEvaluation(gt3D, data_baseline)
-    hpe_base.subfolder += eval_prefix[0]+'/'
-    print("Mean error: {}mm".format(hpe_base.getMeanError()))
+        # Comparison
+        # siggraph
+        data_siggrpah = di.loadBaseline('../dataset/NYU/test/test_predictions.mat', np.asarray(gt3D))
 
-    plot_list = zip(['_'.join(i) for i in model], hpe)
-    hpe_base.plotEvaluation(eval_prefix[0], methodName='Tompson et al.', baseline=plot_list)
+        hpe_siggrpah = NYUHandposeEvaluation(gt3D, data_siggrpah)
+        hpe_siggrpah.subfolder += 'comparison/'
+        print("Tompson et al. Siggraph 2014")
+        print("Mean error: {}mm".format(hpe_siggrpah.getMeanError()))
+        plot_list.append(('Tompson et al.(SIGGRAPH 2014)', hpe_siggrpah))
 
+        # cvww15 deeppriori
+        data_deeppriori = di.loadBaseline('../result/CVWW15/CVWW15_NYU_Prior.txt')
+        hpe_deeppriori = NYUHandposeEvaluation(gt3D, data_deeppriori)
+        hpe_deeppriori.subfolder += 'comparison/'
+        print("Oberweger et al. CVWW 2015")
+        print("Mean error: {}mm".format(hpe_deeppriori.getMeanError()))
+        plot_list.append(('Oberweger et al.(CVWW 2015)', hpe_deeppriori))
+
+        # iccv15 deep loopback
+        data_loopback = di.loadBaseline('../result/ICCV15/ICCV15_NYU_Feedback.txt')
+        hpe_loopback = NYUHandposeEvaluation(gt3D, data_loopback)
+        hpe_loopback.subfolder += 'comparison/'
+        print("Oberweger et al. ICCV 2015")
+        print("Mean error: {}mm".format(hpe_loopback.getMeanError()))
+        plot_list.append(('Oberweger et al.(ICCV 2015)', hpe_loopback))
+        
+        # ijcai16 deepmodel
+        data_deepmodel = di.loadBaseline('../result/IJCAI16/IJCAI16_NYU.txt')
+        hpe_deepmodel = NYUHandposeEvaluation(gt3D, data_deepmodel)
+        hpe_deepmodel.subfolder += 'comparison/'
+        print("Zhou et al. IJCAI 2016")
+        print("Mean error: {}mm".format(hpe_deepmodel.getMeanError()))
+        plot_list.append(('Zhou et al.(IJCAI 2016)', hpe_deepmodel))
+    
+        # plot comparison result
+        # NOTE: figure is in mix_100000 folder
+        hpe[0].plotEvaluation('comparison', methodName='Ours', baseline=plot_list)
+
+    # sample image
     for index in xrange(len(hpe)):
         ind = 0
         for i in testSeqs[0].data:

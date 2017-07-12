@@ -81,7 +81,7 @@ class HandposeEvaluation(object):
 
         self.colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'black', 'brown', 'gray', 'indigo', 'pink',
                        'lightgreen', 'darkorange', 'peru', 'steelblue', 'turquoise']
-        self.linestyles = ['-']  # , '--', '-.', ':', '-', '--', '-.', ':']
+        self.linestyles = ['-', ]#'--', '-.', ':', '-', '--', '-.', ':']
         self.jointcolors = [(0.0, 0.0, 1.0), (0.0, 0.5, 0.0), (1.0, 0.0, 0.0), (0.0, 0.75, 0.75),
                             (0.75, 0, 0.75), (0.75, 0.75, 0), (0.0, 0.0, 0.0)]
 
@@ -264,11 +264,12 @@ class HandposeEvaluation(object):
         plt.xlabel('Distance threshold / mm')
         plt.ylabel('Fraction of frames within distance / %')
         plt.ylim([0.0, 100.0])
-        ax.grid(True)
+        plt.xlim([0.0, 80.0])
+        ax.grid(True, which='major', axis='both')
         # Put a legend below current axis
         handles, labels = ax.get_legend_handles_labels()
-        # lgd = ax.legend(handles, labels, loc='lower right', ncol=1) #, bbox_to_anchor=(0.5,-0.1)
-        lgd = ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=3)
+        lgd = ax.legend(handles, labels, loc='lower right', ncol=1) #, bbox_to_anchor=(0.5,-0.1)
+        #lgd = ax.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=3)
         plt.show(block=False)
         fig.savefig('{}/{}_frameswithin.pdf'.format(self.subfolder,basename), bbox_extra_artists=(lgd,), bbox_inches='tight')
         plt.close(fig)
