@@ -103,33 +103,33 @@ We give some notations about the problem. We denote a sequence of depth images a
 and the corresponding hand poses are $\mathcal{P}=\{P_t\}_{t=1}^T$. $P_t$ is the pose of hand in the form of $n$
 hand joints of its joints $P_t=\{j_i\}_i^n$ with $j_i=(x_i,y_i,z_i)$ from the depth image $I_t$.
 
-In the following, we describe our method for regressing the 3D hand pose. Figure~\ref{fig:architecture} shows the total
-architecture for joints prediction. Aspired by Mixture of Experts~\cite{jacobs1991adaptive}, we use a gated network to
-control two expert networks. In general, network is composed of two parts: gated network and expert networks.
-Each experts predicts the 3D pose given the input, gated network weights the prediction by each experts.
+In the following, we describe our proposed method for hand pose estimation. Figure~\ref{fig:architecture} shows the entire
+architecture. Aspired by Mixture of Experts~\cite{jacobs1991adaptive}, we use a gating network to
+control two expert networks. In general, network is composed of two parts: gating network and expert networks.
+Each experts predicts the 3D pose given the input, gating network weights the prediction by each experts.
 The experts concentrate on different information. LSTM-CNN takes temporal context into account between the consecutive frames.
 Fusion-CNN, thinking over spatial information, fuses the features from depth map and 3D volumetric representation.
 The LSTM-CNN and Fusion-CNN we employ are discussed in Section~\ref{sec:lstm netowork} and Section~\ref{sec:fusion network}.
-And the mixture of experts are discussed in Section~\ref{sec:gated network}.
+And the mixture of experts are discussed in Section~\ref{sec:gating network}.
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=1\linewidth]{src/network/architecture.pdf}
-    \caption{The overview of architecture. The red branch is the gated network, the blue branch is the expert networks.
-    Each expert predicts the 3D pose given the input, gated network weights the prediction by each experts.}
+    \caption{The overview of architecture. The red branch is the gating network, the blue branch is the expert networks.
+    Each expert predicts the 3D pose given the input, gating network weights the prediction by each experts.}
 \label{fig:architecture}
 \end{figure}
 
 \subsection{LSTM Based Network}\label{sec:lstm netowork}
-As we know, the hand poses between frames are correlated(e.g. when grabbing, the joints on fingers are most likely to be closer).
-However, there are no approaches considering the coherence of successive frames in hand pose estimation.
+As we know, the hand poses between successive frames are correlated (e.g. when grabbing, the joints on fingers are most likely
+to be closer). However, there are still no approaches considering the coherence of successive frames in hand pose estimation.
 
 Currently, an Recurrent Neural Network(RNN) with Long Short-Term Memory(LSTM) units~\cite{zaremba2014learning} is widely used
 because they are expressive and easy to train. The LSTM network is mostly used for modeling the long term temporal correspondence.
-As the architecture in Fig~\ref{fig:lstm network}. The input is a successive sequence of frames.
-Based on a simple baseline network shown in Fig~\ref{fig:baseline network}, we replace the last fully connected layer as an LSTM.
-To reserve the features from previous layer, we concatenate features from first fully connected layer and LSTM, and regress hand
-joint locations.
+As the architecture in Fig~\ref{fig:lstm network}, the input is a sequence of frames $\{I_1, I_2, \dots, I_N\}$.
+Based on a simple baseline network shown in Fig~\ref{fig:baseline network}, we replace the last fully connected layer with an LSTM.
+To reserve the original features, we concatenate features from first fully connected layer and LSTM, and regress hand joint locations.
+
 
 \begin{figure*}[t]
     \centering
@@ -152,14 +152,14 @@ joint locations.
 
 
 \subsection{Fusion Network}\label{sec:fusion network}
-According to the discussion in \cite{supancic2015depth} and \cite{deng2017hand3d}, a 3D volumetric representation helps the hand
-pose estimation. So we project the hand in 2D depth map into 3D space, a bit difference is we slice the space into 8 layers,
-as shown in Fig.~\ref{fig:fusion network}. The 3D volumetric representation keep the structure of hand, we can clearly find all
-finger tips in the first layer.
+According to the discussion in \cite{supancic2015depth} and \cite{deng2017hand3d}, 3D volumetric representation helps the hand
+pose estimation. So we project the hand in 2D depth map into 3D space, a bit difference is we slice the space into 8 layers to
+preserve details, as shown in Fig.~\ref{fig:fusion network}. The 3D volumetric representation keep the structure of hand, we
+can clearly find all finger tips in the first layer.
 
 In our opinion, the 3D volumetric representation is easier for constructing the hand structure, but it makes harder to estimate
 the depth of hand joints. To obtain the structure information and depth information simultaneously, we combine these two kinds
-of representation together. As shown in Fig.~\ref{fig:fusion network}, we deploy a Deep-Fusion framework~\cite{chen2016multi} to fuse
+of representation together. In Fig.~\ref{fig:fusion network}, we deploy a Deep-Fusion framework~\cite{chen2016multi} to fuse
 the features. In the fusion network, the different features are fused together hierarchically. which could be expressed as:
 \begin{equation}\label{eq:deep fusion}
 \begin{aligned}
@@ -170,9 +170,9 @@ the features. In the fusion network, the different features are fused together h
 \end{equation}
 The $\oplus$ is element-wise mean, $\textbf{H}$ is the transformation for features, $l$ is the index for layer.
 
-What's more, to have a robust feature, we use an auxiliary loss as the regularization. In Fig.~\ref{fig:fusion network},
+What's more, to obtain a robust feature, we use an auxiliary loss as the regularization. In Fig.~\ref{fig:fusion network},
 the auxiliary path is useful only in training phase, and the layers connected by the blue dotted line share weights.
-When training, the total losses are composed by three losses, i.e. three regression loss in different branch.
+When training, the total losses are composed by three losses, i.e. three regression loss in different branches.
 When testing, the auxiliary pathes are removed.
 \begin{figure*}[t]
     \centering
@@ -181,46 +181,128 @@ When testing, the auxiliary pathes are removed.
 \label{fig:fusion network}
 \end{figure*}
 
-\subsection{Gated Network}\label{sec:gated network}
+\subsection{Gating Network}\label{sec:gating network}
 With two networks stand in the different view for estimating the joints, we want to ensemble their advantages for last prediction.
 Jacob. et al proposed Mixture of Experts(MoE)~\cite{jacobs1991adaptive} for adaptively integrating different regressors.
 
-Gated network weights two predictors, and give out the last prediction according to the weights of predictions as follow:
-\begin{equation}\label{eq:gated network}
+Gating network weights two predictors, and give out the last prediction according to the weights of predictions as follow:
+\begin{equation}\label{eq:gating network}
 \centering
 \textbf{y} = \sum_{k=1}^K \textbf{g}_k \textbf{e}_k
 \end{equation}
 where $K$ is the number of experts, and $\textbf{e}_k$ is the output of $k$-th expert, $\textbf{g}_k$ is the $k$-th weight value of
-gated network. The prediction $\textbf{y}$ is estimated by weighted sum of each output $\textbf{e}_k$.
+gating network. The prediction $\textbf{y}$ is estimated as the weighted sum of each output $\textbf{e}_k$.
 
 Because LSTM-CNN network considers the temporal information and Fusion network extracts the spatial information, mixture of experts
-infer the hand joint location based on spatial-temporal features. Generally, gated network weight two predictions, it is more difficult
-than prediction job. Thus, we double the parameters in the gated network than the base network. And Dropout~\cite{srivastava2014dropout}
-is employed after the fully connected layer to prevent overfitting.
+infer the hand joint location based on spatial-temporal features. Generally, gating network weights two predictions, it is more difficult
+than prediction job. Thus, we double the parameters in the gating network than the base network, and employ Dropout~\cite{srivastava2014dropout}
+after the fully connected layer to prevent overfitting.
 
 
 %\begin{figure}[t]
 %    \centering
 %    \includegraphics[width=1\linewidth]{}
-%    \caption{Gated Network}
-%\label{fig:gated network}
+%    \caption{Gating Network}
+%\label{fig:gating network}
 %\end{figure}
 
 
 %-------------------------------------------------------------------------
 \section{Experiments}\label{sec:experiments}
-In this section, we evaluate our approach on two public datasets, NYU~\cite{tompson2014real} and ICVL~\cite{tang2014latent}, for comparison 
-with state-of-the-art methods. NYU dataset is composed of 72757 training and 8252 testing images, whose resolution is 640x480. The dataset 
-is captured by PrimeSense, and the annotation is obtained by model-based tracking with a Particle Swarm Optimization processing. This dataset 
-is challenge because of its wider pose variation and noisy image yet some incorrect annotations. ICVL dataset is smaller than NYU dataset, contains 
-17604 frames for training and 1596 frames for testing. The image resolution is 320x240 and captured by Creative Interactive Gesture Camera. The scale 
+In this section, we evaluate our approach on two public datasets, NYU~\cite{tompson2014real} and ICVL~\cite{tang2014latent}, for comparison
+with the state-of-art methods. NYU dataset is composed of 72,757 training and 8,252 testing images, the resolution is 640x480. The dataset
+is captured by PrimeSense, and the annotation is obtained by model-based tracking with a Particle Swarm Optimization processing. This dataset
+is challenge because of its wider pose variation and noisy image yet some incorrect annotations. ICVL dataset is smaller than NYU dataset, contains
+22,061 frames for training and 1,596 frames for testing. The resolution of images is 320x240 and captured by Creative Interactive Gesture Camera. The scale
 of image is small and the annotation accuracy is limited, these makes the estimation hard.
 
-\subsection{Evaluation}\label{sec:evaluation}
-The evaluation follows the standard metrics proposed in~\cite{tompson2014real}, including a plot of the percentage of test samples given a maximum distance from 
-ground truth and a mean distance from ground truth. 
+The evaluation follows the standard metrics proposed in~\cite{tompson2014real}, including a plot of the percentage of test samples given a maximum
+distance from ground truth and average distance error (in mm). There are totally 36 annotated joints in NYU dataset, but we only evaluate a subset of 14 joints
+for a fair comparison with~\cite{tompson2014real,oberweger2015hands,oberweger2015training}. In addition to ICVL dataset, we evaluate 16 annotated joints for
+comparison.
 \subsection{Implementation Details}\label{sec:implementation}
+We implement the training and testing using Caffe\cite{jia2014caffe}. The segmentation step follows~\cite{oberweger2015hands} to extract a cube from the depth image,
+and the cube is resized to a 128x128 depth image with the depth value normalized to [-1, 1]. Moreover, we augment the dataset by random rotation.
 
+The three parts of network are trained separately. The baseline network is pre-trained for LSTM-CNN and Fusion network using Adam, we set the learning rate as 1e-3
+and train the network for 100,000 iterations, the learning rate is divided by 10 every 20,000 iterations and the mini-batch is set as 128. LSTM-CNN and Fusion network
+trained based on the baseline network with the parameters fixed, and the configuration is same except that we only train the network for 50,000 iterations. To train
+Gating network, the parameters are all fixed but the parameters in gate branch and the network is trained for 50,000 iterations. Our training takes place on machines
+equipped with a 12GB Titan X GPU and 64GB memory.
+\subsection{Comparison with State-of-art}\label{sec:comparison}
+We compare our approach with several CNN based hand pose estimation method. We compare with four methods~\cite{tompson2014real}\cite{oberweger2015hands}
+\cite{oberweger2015training}\cite{zhou2016model} on NYU dataset, and compare with two methods~\cite{oberweger2015hands}\cite{zhou2016model} on ICVL dataset.
+The mean error of different methods is shown in Tab.~\ref{tab:mean error NYU} and Tab.~\ref{tab:mean error ICVL} as well as average error shown in Fig.~\ref{fig:Qualitative result NYU}.
+
+\begin{table}[htbp]\footnotesize
+\centering
+    \begin{tabular}{|c|c|c|c|c|c|}
+    \hline
+    Methods        &\cite{tompson2014real} &\cite{oberweger2015hands} &\cite{oberweger2015training} &\cite{zhou2016model} &Ours\\
+    \hline
+    Mean Error(mm) &21.0                   &20.8                      &15.9                         &16.9                 &14.8\\
+    \hline
+\end{tabular}
+\vspace{1em}
+\caption{Comparison between our approach and state-of-art methods for mean error.}
+\label{tab:mean error NYU}
+\end{table}
+
+\begin{table}[htbp]\footnotesize
+\centering
+    \begin{tabular}{|c|c|c|c|}
+    \hline
+    Methods        &\cite{oberweger2015hands} &\cite{zhou2016model} &Ours\\
+    \hline
+    Mean Error(mm) &0                      &0                       &0\\
+    \hline
+    \end{tabular}
+\vspace{1em}
+\caption{Comparison between our approach and state-of-art methods for mean error.}
+\label{tab:mean error ICVL}
+\end{table}
+
+\begin{figure*}[t]\footnotesize
+\centering
+    \subfloat[]{
+        \label{fig:comparison NYU}
+        \begin{minipage}[t]{200pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_comparison/comparison_frameswithin.pdf}
+        \end{minipage}
+    }
+    \subfloat[]{
+        \label{fig:joint mean NYU}
+        \begin{minipage}[t]{260pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_comparison/comparison_joint_mean.pdf}
+        \end{minipage}
+    }
+    \caption{Qualitative results for NYU dataset.}
+    \label{fig:Qualitative result NYU}
+\end{figure*}
+\subsection{Ablation}\label{sec:ablation}
+To show the effects of different parts in mixed network, we do the ablation experiments. We show the test result on NYU and ICVL dataset in Fig.~\ref{fig:Qualitative result ablation}.
+
+\begin{figure*}[t]\footnotesize
+\centering
+    \subfloat[]{
+        \label{fig:ablation NYU}
+        \begin{minipage}[t]{200pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_ablation/ablation_frameswithin.pdf}
+        \end{minipage}
+    }
+    \subfloat[]{
+        \label{fig:ablation joint mean NYU}
+        \begin{minipage}[t]{180pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_ablation/ablation_joint_mean.pdf}
+        \end{minipage}
+    }
+    \caption{Qualitative results for ablation experiments.}
+    \label{fig:Qualitative result ablation}
+\end{figure*}
 
 \section{Conclusion}\label{sec:conclusion}
 The conclusion goes here.
@@ -343,7 +425,7 @@ Appendix one text goes here.
 \section*{Acknowledgment}
 
 
-The authors would like to thank...
+The persons would like to thank...
 
 
 % Can use something like this to put references on a page
