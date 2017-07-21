@@ -1,4 +1,4 @@
-test_iter: 44
+test_iter: 100
 test_interval: 1000
 net: "models/ICVL/hand_mix/hand_mix.prototxt"
 base_lr: 1e-3

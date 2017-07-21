@@ -1,351 +1,244 @@
 name: "baseline"
 
 layer {
-	name: "data"
-  	type: "HDF5Data"
-  	top: "depth"
-  	top: "joint"
-  	top: "com"
-  	top: "inds"
-  	hdf5_data_param {
-    	source:"/home/wuyiming/git/Hand/dataset/cache/ICVL_train.txt"
-    	batch_size: 512
-  	}
-  	include {
-    	phase: TRAIN
-  	}
+  name: "data"
+  type: "Python"
+  top: "depth"
+  top: "dpt3D"
+  top: "joint"
+  top: "clip_markers"
+  top: "com"
+  top: "config"
+  top: "inds"
+  python_param {
+    module: "data_input_layer"
+    layer: "ICVLTrainSeq"
+    param_str: '{"buffer_size": "128", "frame_size": "1", "augment": "true", "shuffle": "true", "size": "128"}'
+  }
+  include: {
+    phase: TRAIN
+  }
 }
-
 layer {
-  	name: "data"
-  	type: "HDF5Data"
-  	top: "depth"
-  	top: "joint"
-  	top: "com"
-  	top: "inds"
-  	hdf5_data_param {
-    	source:"/home/wuyiming/git/Hand/dataset/cache/ICVL_test.txt"
-	    batch_size: 64
-  	}
-  	include {
-    	phase: TEST
-  	}
+  name: "data"
+  type: "Python"
+  top: "depth"
+  top: "dpt3D"
+  top: "joint"
+  top: "clip_markers"
+  top: "com"
+  top: "config"
+  top: "inds"
+  python_param {
+    module: "data_input_layer"
+    layer: "ICVLTestSeq"
+    param_str: '{"buffer_size": "64", "frame_size": "1", "augment": "false", "shuffle": "false", "size": "128"}'
+  }
+  include: {
+    phase: TEST
+  }
 }
-# conv1
-
 layer {
-	name: "conv1_1"
-	type: "Convolution"
-	bottom: "depth"
-	top: "conv1_1"
-	convolution_param {
-		num_output: 16
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_conv1_1"
-	type: "ReLU"
-	bottom: "conv1_1"
-	top: "conv1_1"
-}
-
-layer {
-	name: "conv1_2"
-	type: "Convolution"
-	bottom: "conv1_1"
-	top: "conv1_2"
-	convolution_param {
-		num_output: 16
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}	
-}
-
-layer {
-	name: "relu_conv1_2"
-	type: "ReLU"
-	bottom: "conv1_2"
-	top: "conv1_2"
-}
-
-layer {
-	name: "pool1"
-	type: "Pooling"
-	bottom: "conv1_2"
-	top: "pool1"
-	pooling_param {
-		pool: MAX
-		kernel_size: 3
-		stride: 2
-	}
-}
-
-# conv2
-
-layer {
-	name: "res2_branch1"
-	type: "Convolution"
-	bottom: "pool1"
-	top: "res2_branch1"
-	convolution_param {
-		num_output: 32
-		kernel_size: 1
-		pad: 0
-		stride: 1
-		bias_term: false
-		weight_filler {
-			type: "xavier"
-		}
-	}
-}
-
-layer {
-	name: "res2_branch2a"
-	type: "Convolution"
-	bottom: "pool1"
-	top: "res2_branch2a"
-	convolution_param {
-		num_output: 32
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_res2_branch2a"
-	type: "ReLU"
-	bottom: "res2_branch2a"
-	top: "res2_branch2a"
-}
-
-layer {
-	name: "res2_branch2b"
-	type: "Convolution"
-	bottom: "res2_branch2a"
-	top: "res2_branch2b"
-	convolution_param {
-		num_output: 32
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "res2"
-	type: "Eltwise"
-	bottom: "res2_branch1"
-	bottom: "res2_branch2b"
-	top: "res2"
-}
-
-layer {
-	name: "relu_res2"
-	type: "ReLU"
-	bottom: "res2"
-	top: "res2"
-}
-
-layer {
-	name: "pool2"
-	type: "Pooling"
-	bottom: "res2"
-	top: "pool2"
-	pooling_param {
-		pool: MAX
-		stride: 2
-		kernel_size: 3
-	}
-}
-
-# conv3
-
-layer {
-	name: "res3_branch1"
-	type: "Convolution"
-	bottom: "pool2"
-	top: "res3_branch1"
-	convolution_param {
-		num_output: 64
-		kernel_size: 1
-		pad: 0
-		stride: 1
-		bias_term: false
-		weight_filler {
-			type: "xavier"
-		}
-	}
-}
-
-layer {
-	name: "res3_branch2a"
-	type: "Convolution"
-	bottom: "pool2"
-	top: "res3_branch2a"
-	convolution_param {
-		num_output: 64
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "relu_res3_branch2a"
-	type: "ReLU"
-	bottom: "res3_branch2a"
-	top: "res3_branch2a"
-}
-
-layer {
-	name: "res3_branch2b"
-	type: "Convolution"
-	bottom: "res3_branch2a"
-	top: "res3_branch2b"
-	convolution_param {
-		num_output: 64
-		kernel_size: 3
-		pad: 1
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "res3"
-	type: "Eltwise"
-	bottom: "res3_branch1"
-	bottom: "res3_branch2b"
-	top: "res3"
-}
-
-layer {
-	name: "relu_res3"
-	type: "ReLU"
-	bottom: "res3"
-	top: "res3"
-}
-
-layer {
-	name: "pool3"
-	type: "Pooling"
-	bottom: "res3"
-	top: "pool3"
-	pooling_param {
-		pool: MAX
-		stride: 2
-		kernel_size: 3
-	}
-}
-
-layer {
-	name: "fc1"
-	type: "InnerProduct"
-	bottom: "pool3"
-	top: "fc1"
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop1"
-    type: "Dropout"
-    bottom: "fc1"
-    top: "fc1"
-    dropout_param {
-    	dropout_ratio: 0.5
+  name: "convL1_baseline"
+  type: "Convolution"
+  bottom: "depth"
+  top: "convL1_baseline"
+  convolution_param {
+    num_output: 32
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
     }
-}
-
-layer {
-	name: "fc2"
-	type: "InnerProduct"
-	bottom: "fc1"
-	top: "fc2"
-	inner_product_param {
-		num_output: 2048
-		weight_filler {
-			type: "xavier"
-		}
-		bias_filler {
-			type: "constant"
-		}
-	}
-}
-
-layer {
-	name: "drop2"
-    type: "Dropout"
-    bottom: "fc2"
-    top: "fc2"
-    dropout_param {
-    	dropout_ratio: 0.5
+    bias_filler {
+      type: "constant"
     }
+  }
 }
-
 layer {
-	name: "pred"
-    type: "InnerProduct"
-    bottom: "fc2"
-    top: "joint_pred"
-    inner_product_param {
-    	num_output: 48 # 3*J
-    }
+  name: "ReLUconvL1_baseline"
+  type: "ReLU"
+  bottom: "convL1_baseline"
+  top: "convL1_baseline"
 }
-
+layer {
+  name: "poolL1_baseline"
+  type: "Pooling"
+  bottom: "convL1_baseline"
+  top: "poolL1_baseline"
+  pooling_param {
+    pool: MAX
+    kernel_size: 4
+    stride: 4
+  }
+}
+layer {
+  name: "convL2_baseline"
+  type: "Convolution"
+  bottom: "poolL1_baseline"
+  top: "convL2_baseline"
+  convolution_param {
+    num_output: 64
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUconvL2_baseline"
+  type: "ReLU"
+  bottom: "convL2_baseline"
+  top: "convL2_baseline"
+}
+layer {
+  name: "poolL2_baseline"
+  type: "Pooling"
+  bottom: "convL2_baseline"
+  top: "poolL2_baseline"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layer {
+  name: "convL3_baseline"
+  type: "Convolution"
+  bottom: "poolL2_baseline"
+  top: "convL3_baseline"
+  convolution_param {
+    num_output: 128
+    kernel_size: 3
+    pad: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUconvL3_baseline"
+  type: "ReLU"
+  bottom: "convL3_baseline"
+  top: "convL3_baseline"
+}
+layer {
+  name: "poolL3_baseline"
+  type: "Pooling"
+  bottom: "convL3_baseline"
+  top: "poolL3_baseline"
+  pooling_param {
+    pool: MAX
+    kernel_size: 2
+    stride: 2
+  }
+}
+layer {
+  name: "FC1_baseline"
+  type: "InnerProduct"
+  bottom: "poolL3_baseline"
+  top: "FC1_baseline"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUFC1_baseline"
+  type: "ReLU"
+  bottom: "FC1_baseline"
+  top: "FC1_baseline"
+}
+layer {
+  name: "DropoutFC1_baseline"
+  type: "Dropout"
+  bottom: "FC1_baseline"
+  top: "FC1_baseline"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
+}
+layer {
+  name: "FC2_baseline"
+  type: "InnerProduct"
+  bottom: "FC1_baseline"
+  top: "FC2_baseline"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 1024
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUFC2_baseline"
+  type: "ReLU"
+  bottom: "FC2_baseline"
+  top: "FC2_baseline"
+}
+layer {
+  name: "DropoutFC2_baseline"
+  type: "Dropout"
+  bottom: "FC2_baseline"
+  top: "FC2_baseline"
+  dropout_param {
+    dropout_ratio: 0.3
+  }
+}
+layer {
+  name: "joint_pred_baseline"
+  type: "InnerProduct"
+  bottom: "FC2_baseline"
+  top: "joint_pred_baseline"
+  param {
+    lr_mult: 1
+  }
+  inner_product_param {
+    num_output: 48
+    weight_filler {
+      type: "gaussian"
+      std: 0.001
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
 layer {
 	name: "loss"
 	type: "EuclideanLoss"
-	bottom: "joint_pred"
+	bottom: "joint_pred_baseline"
 	bottom: "joint"
 	top: "loss"
+	loss_weight: 1
 }
-
 layer {
-	name: "ignore"
+  name: "ignore"
 	type: "Silence"
 	bottom: "inds"
+  bottom: "dpt3D"
 	bottom: "com"
+	bottom: "config"
+	bottom: "clip_markers"
 }

@@ -21,4 +21,5 @@
 [ "$PBS_O_WORKDIR" != "" ] && cd $PBS_O_WORKDIR
 
 #Our own shell commands, copy the above lines before your real commands
-./experiments/ICVL/train_depth.sh
+
+./experiments/ICVL/train_3D.sh

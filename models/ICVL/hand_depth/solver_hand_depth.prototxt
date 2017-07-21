@@ -1,4 +1,4 @@
-test_iter: 11
+test_iter: 25
 test_interval: 1000
 net: "models/ICVL/hand_depth/hand_depth.prototxt"
 base_lr: 1e-3

@@ -1,4 +1,4 @@
-test_iter: 11
+test_iter: 25
 test_interval: 1000
 net: "models/ICVL/hand_3D/hand_3D.prototxt"
 base_lr: 1e-3

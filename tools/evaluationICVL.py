@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import os
 import time
 import scipy.io as scio
-from data_layer.data_input_layer import *
+from layers.data_input_layer import *
 from data.transformations import transformPoint2D
 from util.handpose_evaluation import ICVLHandposeEvaluation
 from data.importers import ICVLImporter, DepthImporter
@@ -71,7 +71,7 @@ def loadPredFile(filepath, estimation_mode='uvd'):
     loadPredFile(str, str) -> np.array
 
     :param filepath: prediction file path
-    :param estimation_mode: the coordinat of joint, e.g. uvd or xyz
+    :param estimation_mode: the coordinate of joint, e.g. uvd or xyz
     :return: prediction joints
     """
     assert os.path.isfile(filepath), "{} is not a file!".format(filepath)
@@ -108,7 +108,7 @@ def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cp
 
     # extract seq_size (video num), frame_size (frames in video) and joint_size (dimension need to regress) from the blob
     if model_name == 'baseline':
-        frame_size, joint_size = net.blobs['joint_pred'].data.shape
+        frame_size, joint_size = net.blobs['joint_pred_baseline'].data.shape
         seq_size = 1
     else:
         frame_size, seq_size, joint_size = net.blobs['pred_joint'].data.shape
@@ -197,10 +197,10 @@ if __name__ == '__main__':
     # predict joint by ourselves in xyz coordinate
     model.append('baseline')
     #model.append('lstm_small_frame_size_no_concate')
-    model.append('lstm_small_frame_size')
+    #model.append('lstm_small_frame_size')
     weight_num.append('150000')
     #weight_num.append('200000')
-    weight_num.append('200000')
+    #weight_num.append('200000')
     assert len(model) == len(weight_num), 'length is not equal!'
     assert len(model) == len(weight_num), 'length is not equal!'
 

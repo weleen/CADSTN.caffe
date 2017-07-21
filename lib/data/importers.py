@@ -28,15 +28,20 @@ import numpy as np
 from PIL import Image
 import glob
 import os
+import sys
+import time
 import progressbar as pb
 import struct
 from data.basetypes import ICVLFrame, NamedImgSequence
 from util.handdetector import HandDetector
 from data.transformations import transformPoint2D
+from collections import defaultdict
 import cPickle
 import matplotlib
 import matplotlib.pyplot as plt
 import cv2
+from mpl_toolkits.mplot3d import Axes3D
+import re
 
 
 __author__ = "Paul Wohlhart <wohlhart@icg.tugraz.at>, Markus Oberweger <oberweger@icg.tugraz.at>"
@@ -223,7 +228,7 @@ class ICVLImporter(DepthImporter):
         self.useCache = useCache
         self.cacheDir = cacheDir
         self.numJoints = 16
-        
+
     def loadDepthMap(self,filename):
         """
         Read a depth-map
@@ -236,7 +241,7 @@ class ICVLImporter(DepthImporter):
         imgdata = np.asarray(img, np.float32)
 
         return imgdata
-        
+
     def loadSequence(self,seqName,subSeq = None,Nmax=float('inf'),shuffle=False,rng=None,docom=False,dsize=(128, 128)):
         """
         Load an image sequence from the dataset
@@ -312,52 +317,48 @@ class ICVLImporter(DepthImporter):
         trainlabels = '{}/{}.txt'.format(self.basepath, seqName)
 
         inputfile = open(trainlabels)
-        
+
         txt = 'Loading {}'.format(seqName)
-        pbar = pb.ProgressBar(maxval=len(inputfile.readlines()),widgets=[txt, pb.Percentage(), pb.Bar()])
+        pbar = pb.ProgressBar(maxval=len(inputfile.readlines()), widgets=[txt, pb.Percentage(), pb.Bar()])
         pbar.start()
         inputfile.seek(0)
-        
+
         data = []
-        i=0
+        i = 0
         for line in inputfile:
             part = line.split(' ')
-            #print part[0]
-            # check for subsequences and skip them if necessary
             subSeqName = ''
             if subSeq is not None:
                 p = part[0].split('/')
                 # handle original data (unrotated '0') separately
-                if ('0' in subSeq) and len(p[0])>6:
+                if ('0' in subSeq) and len(p[0]) > 6:
                     pass
-                elif not('0' in subSeq) and len(p[0])>6:
-                    i+=1
+                elif not('0' in subSeq) and len(p[0]) > 6:
+                    i += 1
                     continue
-                elif (p[0] in subSeq) and len(p[0])<=6:
+                elif (p[0] in subSeq) and len(p[0]) <= 6:
                     pass
-                elif not(p[0] in subSeq) and len(p[0])<=6:
-                    i+=1
+                elif not(p[0] in subSeq) and len(p[0]) <= 6:
+                    i += 1
                     continue
 
-                if len(p[0])<=6:
+                if len(p[0]) <= 6:
                     subSeqName = p[0]
                 else:
                     subSeqName = '0'
 
-            dptFileName = '{}/{}'.format(objdir,part[0])
-
+            dptFileName = '{}/{}'.format(objdir, part[0])
             if not os.path.isfile(dptFileName):
                 print("File {} does not exist!".format(dptFileName))
-                i+=1
+                i += 1
                 continue
             dpt = self.loadDepthMap(dptFileName)
 
             # joints in image coordinates
-            gtorig = np.zeros((self.numJoints,3),np.float32)
+            gtorig = np.zeros((self.numJoints, 3), np.float32)
             for joint in range(self.numJoints):
                 for xyz in range(0, 3):
-                    gtorig[joint,xyz] = part[joint*3+xyz+1]
-
+                    gtorig[joint, xyz] = part[joint * 3 + xyz + 1]
             # normalized joints in 3D coordinates
             gt3Dorig = self.jointsImgTo3D(gtorig)
             #print gt3D
@@ -367,7 +368,7 @@ class ICVLImporter(DepthImporter):
             hd = HandDetector(dpt, self.fx, self.fy, refineNet=None, importer=self)
             if not hd.checkImage(1):
                 print("Skipping image {}, no content".format(dptFileName))
-                i+=1
+                i += 1
                 continue
             try:
                 dpt, M, com = hd.cropArea3D(gtorig[0],size=config['cube'], docom=docom, dsize=dsize)
@@ -387,14 +388,55 @@ class ICVLImporter(DepthImporter):
             #print("{}".format(gt3Dorig))
             #self.showAnnotatedDepth(ICVLFrame(dpt,gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,subSeqName))
 
-            data.append(ICVLFrame(dpt.astype(np.float32),gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,subSeqName) )
+            dpt3D = np.zeros((8, dpt.shape[0], dpt.shape[1]), dtype=np.uint8)
+            sorted_dpt = np.sort(dpt, axis=None)
+            tmp_M = np.where(sorted_dpt != 0)
+            if sum(sorted_dpt) == 0:
+                continue
+            iii = tmp_M[0][0]
+            min_d = sorted_dpt[iii]
+            max_d = np.max(dpt)
+            slice_range = []
+            slice_step = (max_d - min_d) / 8
+            for i in range(9):
+                slice_range.append(min_d + slice_step * i)
+            slice_range = np.array(slice_range)
+            lh, lw = np.where(dpt != 0)
+            for ii in xrange(lh.shape[0]):
+                ih, iw = lh[ii], lw[ii]
+                dptValue = dpt[ih, iw]
+                slice_layer = np.where(dptValue >= slice_range)[0][-1]
+                if slice_layer == 8:
+                    slice_layer = 7
+                dpt3D[slice_layer, ih, iw] = 1
+            # a = np.where(dpt3D == 1)
+
+            # print("{}".format(gt3Dorig))
+            # self.showAnnotatedDepth(ICVLFrame(dpt,dpt3D,gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,''))
+            # #visualize 3D
+            # fig = plt.figure()
+            # ax = fig.add_subplot(111,projection='3d')
+            # d,x,y = np.where(dpt3D == 1)
+            # ax.scatter(x,y,8 - d)
+            # ax.view_init(0,0)
+            # ax.set_xlabel('x')
+            # ax.set_ylabel('y')
+            # ax.set_zlabel('d')
+            # plt.show()
+
+            data.append(ICVLFrame(dpt.astype(np.float32),dpt3D,gtorig,gtcrop,M,gt3Dorig,gt3Dcrop,com3D,dptFileName,subSeqName))
+            if subSeq is not None:
+                current_folder = dptFileName[(dptFileName.find('Depth/')+6):(dptFileName.find('image')-1)]
+            else:
+                current_folder = dptFileName[(dptFileName.find('test')):(dptFileName.find('image')-1)]
+            # print('Loading images in ' + current_folder)
             pbar.update(i)
-            i+=1
+            i += 1
 
             # early stop
-            if len(data)>=Nmax:
+            if len(data) >= Nmax:
                 break
-                   
+
         inputfile.close()
         pbar.finish()
         print("Loaded {} samples.".format(len(data)))
@@ -402,14 +444,14 @@ class ICVLImporter(DepthImporter):
         if self.useCache:
             print("Save cache data to {}".format(pickleCache))
             f = open(pickleCache, 'wb')
-            cPickle.dump((seqName,data,config), f, protocol=cPickle.HIGHEST_PROTOCOL)
+            cPickle.dump((seqName, data, config), f, protocol=cPickle.HIGHEST_PROTOCOL)
             f.close()
 
         # shuffle data
         if shuffle and rng is not None:
             print("Shuffling")
             rng.shuffle(data)
-        return NamedImgSequence(seqName,data,config)
+        return NamedImgSequence(seqName, data, config)
 
     def loadBaseline(self, filename, firstName=False):
         """
@@ -573,7 +615,7 @@ class NYUImporter(DepthImporter):
 
         for line in range(joints3D.shape[0]):
             dptFileName = '{0:s}/depth_1_{1:07d}.png'.format(objdir, line+1)
-            print dptFileName
+            #print dptFileName
             # augment the training dataset
             if rotation:
                 assert seqName == 'train', 'we only rotate the training data'

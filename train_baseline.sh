@@ -15,10 +15,10 @@
 
 
 #Remap the free gpus to make the IDs always start from 0
-source /share/data/script/util/remap_free_gpus.sh
+#source /share/data/script/util/remap_free_gpus.sh
 
 # Enter the job's working directory.
 [ "$PBS_O_WORKDIR" != "" ] && cd $PBS_O_WORKDIR
 
 #Our own shell commands, copy the above lines before your real commands
-./experiments/NYU/train_baseline.sh
+./experiments/ICVL/train_baseline.sh

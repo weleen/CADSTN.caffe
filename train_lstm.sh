@@ -5,7 +5,7 @@
 
 # Job asks for 1 node (computer) and 1 processing number per node (total 4 GPUs each node)
 # Now we want to use 2 GPUs, then we set ppn=2.
-#PBS -l nodes=1:ppn=1
+#PBS -l nodes=compute-0-3:ppn=1
 
 # Redirect standard error to standard output
 #PBS -j oe
@@ -21,4 +21,4 @@ source /share/data/script/util/remap_free_gpus.sh
 [ "$PBS_O_WORKDIR" != "" ] && cd $PBS_O_WORKDIR
 
 #Our own shell commands, copy the above lines before your real commands
-./experiments/NYU/train_lstm.sh
+./experiments/ICVL/train_lstm.sh

@@ -1,5 +1,4 @@
 name: "3D_and_depth"
-
 layer {
   name: "data"
   type: "Python"
@@ -151,7 +150,22 @@ layer {
     num_output: 32
     kernel_size: 3
     pad: 1
-    group: 4
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }  
+}
+layer {
+  name: "convL1_1x1"
+  type: "Convolution"
+  bottom: "convL1_3x3"
+  top: "convL1_1x1"
+  convolution_param {
+    num_output: 32
+    kernel_size: 1
     weight_filler {
       type: "xavier"
     }
@@ -163,13 +177,13 @@ layer {
 layer {
   name: "ReLUconvL1_3D"
   type: "ReLU"
-  bottom: "convL1_3x3"
-  top: "convL1_3x3"
+  bottom: "convL1_1x1"
+  top: "convL1_1x1"
 }
 layer {
   name: "poolL1_3D"
   type: "Pooling"
-  bottom: "convL1_3x3"
+  bottom: "convL1_1x1"
   top: "poolL1_3D"
   pooling_param {
     pool: MAX
@@ -186,7 +200,6 @@ layer {
     num_output: 64
     kernel_size: 3
     pad: 1
-    group: 2
     weight_filler {
       type: "xavier"
     }
@@ -196,15 +209,31 @@ layer {
   }
 }
 layer {
-  name: "ReLUconvL2_3D"
-  type: "ReLU"
+  name: "convL2_1x1"
+  type: "Convolution"
   bottom: "convL2_3x3"
-  top: "convL2_3x3"
+  top: "convL2_1x1"
+  convolution_param {
+    num_output: 64
+    kernel_size: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
+  name: "ReLUconvL2_1x1"
+  type: "ReLU"
+  bottom: "convL2_1x1"
+  top: "convL2_1x1"
 }
 layer {
   name: "poolL2_3D"
   type: "Pooling"
-  bottom: "convL2_3x3"
+  bottom: "convL2_1x1"
   top: "poolL2_3D"
   pooling_param {
     pool: MAX
@@ -230,15 +259,31 @@ layer {
   }
 }
 layer {
+  name: "convL3_1x1"
+  type: "Convolution"
+  bottom: "convL3_3x3"
+  top: "convL3_1x1"
+  convolution_param {
+    num_output: 128
+    kernel_size: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+layer {
   name: "ReLUconvL3_3D"
   type: "ReLU"
-  bottom: "convL3_3x3"
-  top: "convL3_3x3"
+  bottom: "convL3_1x1"
+  top: "convL3_1x1"
 }
 layer {
   name: "poolL3_3D"
   type: "Pooling"
-  bottom: "convL3_3x3"
+  bottom: "convL3_1x1"
   top: "poolL3_3D"
   pooling_param {
     pool: MAX
