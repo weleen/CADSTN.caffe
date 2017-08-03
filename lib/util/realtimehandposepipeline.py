@@ -87,6 +87,9 @@ class RealtimeHandposePipeline(object):
         :param filenames: filenames to load
         :return: None
         """
+        #initilize cv2.VideoWriter
+        fourcc = cv2.cv.CV_FOURCC('I','4','2','0')
+        writer = cv2.VideoWriter('res.avi', fourcc, 25.0, (640, 480))
 
         allstart = time.time()
         if not isinstance(filenames, list):
@@ -105,10 +108,10 @@ class RealtimeHandposePipeline(object):
             frames = numpy.array([None] * self.frameSize)
             for j in xrange(self.frameSize): # frame size
                 if ind < len(filenames):
-                    f = '.' + filenames[ind]
+                    f = filenames[ind]
                     ind += 1
                 else:
-                    f = '.' + filenames[ind - 1]
+                    f = filenames[ind - 1]
                 print('load {}'.format(f))
                 frames[j] = self.importer.loadDepthMap(f)
             print('{}ms load {} frames'.format((time.time() - start)*1000., self.frameSize))
@@ -131,10 +134,13 @@ class RealtimeHandposePipeline(object):
             com3D.shape = (com3D.shape[0], 1, com3D.shape[1])
             startp = time.time()
             self.net.blobs['depth'].data[...] = crop
-            self.net.blobs['clip_markers'].data[...] = cm
+            self.net.blobs['clip_markers'].data[...] = cm.reshape(16)
             self.net.forward()
-            pred = self.net.blobs['pred_joint'].data
-            poses = pred.reshape(pred.shape[0], pred.shape[2] / com3D.shape[2], com3D.shape[2]) * self.config['cube'][2] / 2 + com3D
+            pred = self.net.blobs['joint_pred_mix'].data
+            print pred.shape
+            print com3D.shape
+            print self.config['cube'][2]
+            poses = pred.reshape(pred.shape[0], pred.shape[1] / com3D.shape[2], com3D.shape[2]) * self.config['cube'][2] / 2 + com3D
             assert poses.shape[0] == self.frameSize, 'size mismatch! {} not equal to {}'.format(poses.shape[0], self.frameSize)
             print('{}ms pose {} frames'.format((time.time() - startp)*1000., self.frameSize))
                               
@@ -142,6 +148,7 @@ class RealtimeHandposePipeline(object):
             for j in xrange(self.frameSize):
                 starts = time.time()
                 img = self.show(frames[j], poses[j])
+                writer.write(img)
                 img = self.addStatusBar(img)
                 cv2.imshow('frame', img)
                 self.lastshow = time.time()
@@ -150,7 +157,7 @@ class RealtimeHandposePipeline(object):
                 print("{}ms display".format((time.time() - starts)*1000.))
 
             print("-> {}ms per {} frames".format((time.time() - start)*1000., self.frameSize))
-
+        writer.release()
         print("DONE in {}s".format((time.time() - allstart)))
         cv2.destroyAllWindows()
 
