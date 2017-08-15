@@ -7,6 +7,5 @@
 *.db
 *.bak
 changelog.txt
-bare_jrnl_comsoc.pdf
-bare_jrnl_comsoc.blg
-bare_jrnl_comsoc.out
+*.blg
+*.out
