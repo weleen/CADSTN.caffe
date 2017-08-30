@@ -81,7 +81,7 @@ class HandposeEvaluation(object):
 
         self.colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'black', 'brown', 'gray', 'indigo', 'pink',
                        'lightgreen', 'darkorange', 'peru', 'steelblue', 'turquoise']
-        self.linestyles = ['-', ]#'--', '-.', ':', '-', '--', '-.', ':']
+        self.linestyles = ['-', '--', '-.', ':', '-', '--', '-.', ':']
         self.jointcolors = [(0.0, 0.0, 1.0), (0.0, 0.5, 0.0), (1.0, 0.0, 0.0), (0.0, 0.75, 0.75),
                             (0.75, 0, 0.75), (0.75, 0.75, 0), (0.0, 0.0, 0.0)]
 
@@ -265,7 +265,9 @@ class HandposeEvaluation(object):
         plt.ylabel('Fraction of frames within distance / %')
         plt.ylim([0.0, 100.0])
         plt.xlim([0.0, 80.0])
-        ax.grid(True, which='major', axis='both')
+        plt.minorticks_on()
+        ax.grid(True, which='major', linestyle='-', linewidth=1)
+        ax.grid(True, which='minor', linestyle='--', linewidth=0.5)
         # Put a legend below current axis
         handles, labels = ax.get_legend_handles_labels()
         lgd = ax.legend(handles, labels, loc='lower right', ncol=1) #, bbox_to_anchor=(0.5,-0.1)

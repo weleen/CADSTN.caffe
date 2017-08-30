@@ -191,7 +191,7 @@ if __name__ == '__main__':
     # predict joint by ourselves in xyz coordinate
     if ABLATION == True:
         model.append(('baseline','100000'))
-        model.append(('3D', '100000'))
+        #model.append(('3D', '100000'))
         model.append(('3D_and_depth', '100000')) 
         model.append(('lstm','100000')) 
         model.append(('mix', '100000'))
@@ -226,11 +226,11 @@ if __name__ == '__main__':
     # Load the evaluation
     if ABLATION:
         # plot list
-        plot_list = zip([i[0] for i in model], hpe)
+        plot_list = zip(['Basic', 'Spatial', 'Temporal', 'Final'], hpe)
 
         # plot ablation result
         # NOTE: figure is in mix_100000 folder
-        hpe[-1].plotEvaluation('ablation', methodName='mix', baseline=plot_list[:-1])
+        hpe[-1].plotEvaluation('ablation', methodName='Final', baseline=plot_list[:-1])
     else:
         # plot list
         plot_list = []
@@ -243,15 +243,15 @@ if __name__ == '__main__':
         hpe_siggrpah.subfolder += 'comparison/'
         print("Tompson et al. Siggraph 2014")
         print("Mean error: {}mm".format(hpe_siggrpah.getMeanError()))
-        plot_list.append(('Tompson et al.(SIGGRAPH 2014)', hpe_siggrpah))
+        plot_list.append(('HeatMap', hpe_siggrpah))
 
         # cvww15 deeppriori
-        data_deeppriori = di.loadBaseline('../result/CVWW15/CVWW15_NYU_Prior.txt')
+        data_deeppriori = di.loadBaseline('../result/CVWW15/CVWW15_NYU_Prior-Refinement.txt')
         hpe_deeppriori = NYUHandposeEvaluation(gt3D, data_deeppriori)
         hpe_deeppriori.subfolder += 'comparison/'
         print("Oberweger et al. CVWW 2015")
         print("Mean error: {}mm".format(hpe_deeppriori.getMeanError()))
-        plot_list.append(('Oberweger et al.(CVWW 2015)', hpe_deeppriori))
+        plot_list.append(('DeepPrior', hpe_deeppriori))
 
         # iccv15 deep loopback
         data_loopback = di.loadBaseline('../result/ICCV15/ICCV15_NYU_Feedback.txt')
@@ -259,7 +259,7 @@ if __name__ == '__main__':
         hpe_loopback.subfolder += 'comparison/'
         print("Oberweger et al. ICCV 2015")
         print("Mean error: {}mm".format(hpe_loopback.getMeanError()))
-        plot_list.append(('Oberweger et al.(ICCV 2015)', hpe_loopback))
+        plot_list.append(('Feedback', hpe_loopback))
         
         # ijcai16 deepmodel
         data_deepmodel = di.loadBaseline('../result/IJCAI16/IJCAI16_NYU.txt')
@@ -267,7 +267,7 @@ if __name__ == '__main__':
         hpe_deepmodel.subfolder += 'comparison/'
         print("Zhou et al. IJCAI 2016")
         print("Mean error: {}mm".format(hpe_deepmodel.getMeanError()))
-        plot_list.append(('Zhou et al.(IJCAI 2016)', hpe_deepmodel))
+        plot_list.append(('DeepModel', hpe_deepmodel))
         
         # ijcv lie-x 
         data_lie = di.loadBaseline('../result/IJCV16/IJCV16_lie_hand_jnts_estm_result_uvd.txt')
@@ -275,7 +275,7 @@ if __name__ == '__main__':
         hpe_lie.subfolder += 'comparison/'
         print("Xu et al. IJCV 2017")
         print("Mean error: {}mm".format(hpe_lie.getMeanError()))
-        plot_list.append(('Xu et al.(IJCV 2017)', hpe_lie))
+        plot_list.append(('Lie-X', hpe_lie))
 
         # plot comparison result
         # NOTE: figure is in mix_100000 folder
@@ -285,7 +285,7 @@ if __name__ == '__main__':
     for index in xrange(len(hpe)):
         ind = 0
         for i in testSeqs[0].data:
-            if ind % 200 != 0:
+            if ind % 20 != 0:
                 ind += 1
                 continue
             jt = pred_joints[index][ind]
@@ -294,5 +294,5 @@ if __name__ == '__main__':
                 t=transformPoint2D(jtI[joint], i.T)
                 jtI[joint, 0] = t[0]
                 jtI[joint, 1] = t[1]
-            hpe[index].plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix[index], ind))
+            hpe[index].plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix[index], ind), showGT=False)
             ind+=1
