@@ -28,13 +28,13 @@
 \fi
 \usepackage{url}
 \usepackage{hyperref}
+\usepackage{bbm}
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
 
-\newcommand{\J}{\textbf{J}}
 
 \begin{document}
-\title{Temporal-Spatial Depth Map Based Hand Pose Estimation}
+\title{Spatial-Temporal Hand Pose Estimation For a Sequence of Depth Images}
 
 \author{{Anonymous}% <-this % stops a space
 \thanks{Anonymous}}
@@ -89,17 +89,6 @@ the mapping from depth image or 3D voluetric representation to the hand pose. So
 ~\cite{sun2015cascaded, ye2016spatial} explicitly model the hierarchical hand structure in addition. In
 practice, depth images are in selected from videos, and video has time-varying dynamic properties.
 
-Motivated by the oberservation above, we propose a method focus on the spatial structure as well as
-temporal information. The different viewpoint for solving the problem is modelled as different part in
-our method. Figure.~\ref{fig:architecture} shows a holistic illustration for our approach. The first 
-part is denoted as \emph{Spatial Network} in this paper, which learns the mapping to hand pose from 
-spatial information. \emph{Spatial Network} works on a single depth image, with the depth image and 
-corresponding sliced 3D volumetric representation input into the network, spatial information extracted
-hierarchically improve the performance of pose estimation. The second part is denoted as \emph{Temporal Network}. 
-This network pay attention to the time 
-
-
-
 \begin{figure}[t]
     \centering
     \includegraphics[width=1\linewidth]{src/network/architecture.pdf}
@@ -111,21 +100,37 @@ This network pay attention to the time
 \label{fig:architecture}
 \end{figure}
 
-The estimation network is evaluated on two public datasets. Due to the practicability, the network
-could run in in real-time on the GPU and achieve the comparable or better results than state-of-art methods.
-We summary our contribution in the following three folds:
+Motivated by the observation above, we propose a method focus on the spatial structure as well as
+temporal information. The different viewpoint for solving the problem is modelled as different part in
+our method. Figure~\ref{fig:architecture} shows a holistic illustration for our approach. The first
+part is denoted as \emph{Spatial Network} in this paper, which learns the mapping to hand pose from
+spatial information. \emph{Spatial Network} works on a single depth image, with the depth image and
+corresponding sliced 3D volumetric representation input into the network, spatial information extracted
+hierarchically improve the performance of pose estimation. The second part is denoted as \emph{Temporal Network}.
+The conventional works~\cite{tang2014latent, zhou2016model, tang2015opening} lay emphasis on the
+hierarchical structure or spatial constraint of hand, while ignore the relationship
+of the between frames. Motivated by this, we create this network pay attention to the time coherence property
+in depth map video. The network take the previous features into account when estimating the pose in current frame,
+in other words, the history is memorized by the network and affects the current prediction.
+
+For the sake of accurately estimating the hand pose, we ensemble the aforementioned two networks as an
+integration by Mixture of Experts~\cite{jacobs1991adaptive}. The networks for prediction task are called
+\emph{experts}, and via \emph{gater} to outputs a set of weights, the final prediction is obtained by the
+weighted combination of the experts outputs. By means of this ensemble approach, spatial information and temporal
+coherence are thought to have in mind as a unified scheme. Moreover, the estimation network is evaluated on
+two public datasets. Due to the practicability and efficiency, the network could run in in real-time on the GPU and achieve
+the comparable or better results than state-of-art methods. We summary our contribution in the following two folds:
 \begin{itemize}
   \item
   We integrate features from depth map and sliced 3D volumetric representation for hand pose
   estimation by deep fusion network. The experiment reveals that 3D volumetric representation
-  benefits the hand pose estimation.
+  benefits the hand pose estimation. Furthermore, we model the coherence among frames by LSTM,
+  and implement a hand pose estimation system with an eye to accuracy, efficiency, robustness
+  and stability simultaneously.
   \item
-  We model the coherence among frames by LSTM, and implement a hand pose
-  estimation system with an eye to accuracy, efficiency, robustness and stability
-  simultaneously.
-  \item
-  We evaluate our approach on two public datasets (e.g. NYU and ICVL), and get the
-  comparable or better results than state-of-art methods.
+  Our proposed method could run about 75 fps on a single GPU, which meet the real-time demand
+  in hand pose estimation. Moreover, we evaluate our approach on two public datasets (e.g. NYU
+  and ICVL), and get the comparable or better results than state-of-art methods.
 \end{itemize}
 
 % needed in second column of first page if using \IEEEpubid
@@ -134,30 +139,89 @@ We summary our contribution in the following three folds:
 %-------------------------------------------------------------------------
 \section{Related Work}\label{sec:related work}
 \subsection{Hand Pose Estimation}
+The approaches proposed in this area fall in three categories: data-driven, model-based and hybrid approaches.
 
+Model-based approaches commonly evaluate the manually designed energy function on the basis of hand skeleton model,
+the problem is formulated as an optimization problem that the objective function measure the discrepancy between
+model hypothesis and the actual ones. Oikonomidis et.al ~\cite{oikonomidis2010markerless,oikonomidis2011efficient}
+use Particle Swarm Optimization (PSO) solving the optimization problem about the hand model parameters.
+With a discriminative initialization method, \cite{tagliasacchi2015robust} employ Iterative Closest Point (ICP)
+for optimizing problem. \cite{qian2014realtime} use ICP-PSO for optimization and apply to a sphere-based hand motion model.
+\cite{RoditakisMakrisArgyros2017} propose a method that explicitly considers constraints on the 3D locations of fingertips.
+Different hand models are adopted in model based methods, such as surface model
+~\cite{qian2014realtime,khamis2015learning} and gaussian model~\cite{sridhar2014real,tang2015opening},
+etc. While the hand model is intuitive, these methods are sensitive to the initialization, and the errors are accumulated
+during the estimation because of the temporal information used.
+
+Data-driven approaches used in hand pose estimation are roughly divided into two camps: randomized decision forest (RDF)
+and deep learning based methods. \cite{keskin2012hand,tang2013real,tang2014latent,sun2015cascaded,li20153d} employ RDF
+for estimation. Specifically, \cite{keskin2012hand} use RDF-based method for hand part labelling and mean shift algorithm
+as the joint finder. \cite{tang2013real} propose a semi-supervised transductive regression forest to label the realistic
+dataset and the synthetic dataset, then refine joints by a data-driven, pseudo-kinematic technique. In \cite{tang2014latent},
+a latent regression forest is learned for structured hand joints coarse-to-fine search, and \cite{li20153d} integrate
+segmentation index points (SIP) achieving a better results. \cite{sun2015cascaded} hierarchically regress the joint
+locations with a cascaded scheme. On the other side, CNN based methods learn the mapping from input to the hand pose,
+comparing to the RDF based methods, a commonly better result could be achieved because the better features are learned.
+Tompson et al.~\cite{tompson2014real} firstly employ CNN in hand pose estimation to regress the heat map and make use
+of inverse kinematics algorithm as the post-processing. Oberweger et al.~\cite{oberweger2015hands} use segmented depth
+map as input straightly regress 3D joint locations and do joint-specific refinement to increase the accuracy. Then in
+~\cite{oberweger2015training}, a feedback loop framework is proposed, which is composed of a predictor for initialization,
+a synthesizer for image generation and a updater for refinement. \cite{zhou2016model} design a network embedding the
+forward kinematic process, which gets rid of the inconvenient post-processing. \cite{ye2016spatial} presents a method
+by applying the kinematic hierarchy to both the input and feature space of the discriminative method and the optimization
+of the generative method. Ge et al.~\cite{ge2016robust} predicts the heat-maps by a multi-view regression framework, and
+\cite{ge2017_3D} improve this method by applying 3D CNN, which takes multi-view 3D volumetric representations as input for
+regressing full 3D hand pose in a single pass. Wan et al.~\cite{wan2017crossing} use VAE and GAN to learn the manifold of
+hand pose, with an alignment operation, pose space are projected into a corresponding depth map space via a shared latent
+space.
+
+Hybrid approaches\cite{keskin2013real, sharp2015accurate,madadi2017occlusion} retain the advantages of both data-driven and
+model-based methods. \cite{keskin2013real} use the hand model for synthetic dataset generation followed by an RDF classifier,
+then the mean-shift joint finder is adopted for final joint localization. \cite{sharp2015accurate} follows a different pipeline
+which comprising hand RoI extraction, reinitialization and model fitting for hand tracking, hand model is used for extraction
+and model fitting, the reinitialization step infer the distribution over hand poses via a layered discriminative model. In
+\cite{madadi2017occlusion}, hand pose is recovered through a combination of part-based model fitting and data-driven approaches
+in a single frame, and refine occluded joints in a sequence.
+
+\subsection{LSTM}
+introduce LSTM.
 
 %------------------------------------------------------------------------
 \section{Hand Pose Estimation}\label{sec:hand pose estimation}
+In this section, we introduce our contributions to hand pose estimation.
+
+\subsection{Problem Analysis}\label{sec:problem analysis}
+% prepare the notation for problem
+Our objective is to predict the hand joint locations in 3D space from a sequence of depth images,
+the locations are represented as a set of keypoints. We denote a single depth image as $\mathit{I}$, and
+the corresponding hand pose is
+$\mathit{J}=\{\mathit{j}_i\}_i^K \in \mathbb{R}^{3 \times K}$ with $\mathit{j}_i=(x_i,y_i,z_i)$
+represents the 3D position of $i$-th joint in the depth image $\mathit{I}$, $K$ is the number of joints,
+it is different among datasets.
+
 In this paper, we concentrate on the efficient 3D hand pose estimation from the depth images and
 introduce a robust spatial-temporal hand pose estimation approach. In the natural scene, the camera
 capture the consecutive frames and hand is contained in the frame.
 The hand pose in the between frames is highly correlated. Inspired by the hand pose
-tracking~\cite{quach2016depth}, we embed Long Short Time Memory (LSTM) into a \emph{Temporal Network}
-to extract features considering the sequentiality. Recurrent LSTM encode the original sequential
+tracking~\cite{quach2016depth}, we embed Long Short Time Memory (LSTM) into \emph{Temporal Network}
+to extract features consider the sequentiality. Recurrent LSTM encode the original sequential
 features into a correlated features for estimation. Furthermore, the spatial information of hand is
 important, many approaches focus on tree structured skeleton of hand to address this problem (e.g.
 ~\cite{li20153d, wan2016direction, ye2016spatial}). And 3D volumetric representation could well reserve
 the spatial information~\cite{deng2017hand3d} for solving pose estimation in 3D. We employ the
-Deeply-fusion framework ~\cite{wang2016deeply} to fuse depth image and 3D volumetric representations,
-which is called \emph{Spatial Network}. \emph{Temporal Network} and \emph{Spatial Network} predict
-hand joint locations based on different features, which is the expert in the Mixture of Experts
-(MoE). In MoE, the different experts give out their predictions and \emph{Gate Network} weights the
-predictions.
+Deeply-fusion framework ~\cite{wang2016deeply} to fuse the features from depth image and sliced 3D
+volumetric representations, which is called \emph{Spatial Network}. \emph{Temporal Network} and
+\emph{Spatial Network} predict hand joint locations based on different features, which plays a
+role of experts in the Mixture of Experts (MoE). In MoE, the different experts give out their
+predictions and \emph{Gate Network} weights the predictions.
+
+In this section, we introduce our method for hand pose estimation step by step.
+The \emph{Temporal Network} and \emph{Spatial Network} we employed are discussed in Section
+~\ref{sec:temporal netowork} and Section~\ref{sec:spatial network}, and \emph{Gate Network} is
+discussed in Section~\ref{sec:gate network}.
 
 
-
-% In this section, we introduce our method for hand pose estimation. Figure
-% ~\ref{fig:architecture} shows the entire architecture. Aspired by Mixture of Experts
+% Figure ~\ref{fig:architecture} shows the entire architecture. Aspired by Mixture of Experts
 % ~\cite{jacobs1991adaptive}, network is composed of two parts: \emph{Gate Network} and
 % \emph{Expert Networks}, we use a \emph{Gate Network} to control two expert networks.
 % Each expert predicts the 3D pose given the input image, the \emph{Gate Network} weights
@@ -166,42 +230,39 @@ predictions.
 % \emph{Spatial Network}, thinking over spatial information, fuses the features from depth
 % map and 3D volumetric representation.
 
-% The \emph{Temporal Network} and \emph{Spatial Network} we employed are discussed in Section
-% ~\ref{sec:temporal netowork} and Section~\ref{sec:spatial network}, and \emph{Gate Network} is
-% discussed in Section~\ref{sec:gate network}.
+\subsection{Basic Network}\label{sec:basic network}
+We first propose \emph{Basic Network} as the basic network for estimation. As shown in Figure
+~\ref{fig:basic network}, the \emph{Basic Network} is a typical CNN architecture, which is composed
+of several stacked convolution layers, with max-pooling layer do downsampling operation in between
+them. The fully connected layers perform as a regressor for last regression. In addition, the activation
+function used in network is ReLU, which provides non linear ability and improves the robustness. To resist
+ooverfit, the Dropout is adopted in fully connected layers.
 
-\subsection{Problem Analysis}\label{sec:problem analysis}
-% prepare the notation for problem
-Our objective is to predict the 3D hand joint locations from a depth image containing a hand,
-the locations are represented as a set of keypoints. Here we give some notations about the
-problem. We denote a depth image as $I$, and the corresponding hand pose is
-$\J=\{\textbf{j}_i\}_i^n$ with $\textbf{j}_i=(x_i,y_i,z_i)$ representing a 3D position of a
-joint in the depth image $I$. And $n$ is the number of joints, it is different between plenties
-of datasets (e.g. $n=36$ for NYU, $n=16$ for ICVL).
-
+The \emph{Basic Network} performs a pre-trained network for \emph{Temporal Network}, and it could get a
+satisfied result as shown in the experiments.
 
 \subsection{Temporal Network}\label{sec:temporal netowork}
 \begin{figure}[t]
     \centering
-    \subfloat[Baseline]{
-        \label{fig:baseline network}
+    \subfloat[Basic Netowrk]{
+        \label{fig:basic network}
         \begin{minipage}[t]{116pt}
             \centering
             \includegraphics[width=1\linewidth]{src/network/baseline.pdf}
         \end{minipage}
     }
-    \subfloat[Temporal Network.]{
+    \subfloat[Temporal Network]{
         \label{fig:temporal network}
         \begin{minipage}[t]{110pt}
             \includegraphics[width=1\linewidth]{src/network/temporal.pdf}
         \end{minipage}
     }
-\caption{\emph{Baseline} and \emph{Temporal network}. In \emph{Baseline}, activation
-function is relu which is follow by convolution layer and fully connected layer, and dropout is
-adopted to resist overfitting. In \emph{Temporal Network}, the parameters in previous layers are
-borrowed from \emph{Baseline}, lstm layer and last fully connected layer are trained when
+\caption{\emph{Basic Network} and \emph{Temporal Network}. In \emph{Basic Network}, convolution
+layers and fully connected layers are followed by activation function is relu, and dropout is
+adopted to resist overfit. In \emph{Temporal Network}, the parameters in previous layers are
+borrowed from \emph{Basic Network}, lstm layer and last fully connected layer are trained when
 the input is a sequence of images.}
-\label{fig:baseline and lstm network}
+\label{fig:basic and lstm network}
 \end{figure}
 
 As we know, the hand poses between successive frames are correlated (e.g. when grabbing, the joints
@@ -213,103 +274,97 @@ simultaneously. We do several modifications to extract robust features and have 
 temporal information.
 
 As is shown in Figure~\ref{fig:temporal network}, a sequence of frames $\{I_1, I_2, \dots, I_N\}$ is
-taken as input and give out the estimated pose. Considering the $t$-th depth image $I_t$, the image
-flow through the convolution network and the feature extracted is denoted as follows,
+taken as input and the network gives out the estimated pose. Think about the $t$-th depth image $I_t$,
+the image flow through the convolution network and the feature extracted is denoted as follows,
 \begin{equation}
 \phi(I_t)=f_{\theta_c}(pre(I_t))
 \end{equation}
 where $f_{\theta_c}(\cdot)$ is a convolutional network with parameters $\theta_c$ and
 $pre(\cdot)$ is the preprocessing to crop out the hand. The preprocessing step is declared
-in Section.~\ref{sec:experiments}. The feature is fed into LSTM and LSTM output its hidden
-state as new feature,
+in Section.~\ref{sec:experiments}. The features are fed into LSTM and LSTM layer outputs its hidden
+state,
 \begin{equation}
 h_t=f_{\theta_l}(h_{t-1}, \phi(I_t))
 \end{equation}
 where $f_{\theta_l}$ is the parameters in LSTM cell. The new features and original features
-are concatenated then fed into the last fully connected layer and network give out the prediction.
+are concatenated then fed into the last fully connected layer and network give out the predictions.
 
-In the training stage, CNN network for extracting features is pre-trained. In Figure.
-~\ref{fig:baseline network}, the LSTM layer is replaced by a fully connected layer.
-With the parameters in CNN is fixed, we train LSTM and last layer solely.
+In the training stage, the parameters of layers before lstm layer are borrowed from \emph{Basic Network}
+and fixed, then we train LSTM and last fully connected layer solely.
 
 \subsection{Spatial Network}\label{sec:spatial network}
 According to the discussion in \cite{supancic2015depth, deng2017hand3d, ge2017_3D}, 3D
 volumetric representation benefits the hand pose estimation. However, due to the high
-cost of 3D convolution, the input is mostly small such as 32x32x32
-~\cite{deng2017hand3d, ge2017_3D}, which results in "details lost". We employ an eclectic
-solution, the background is omitted in our 3D representation, and the space is sliced
-into 8 layers to preserve more details. The exemplar is shown in Figure.
+cost of 3D convolution, the input is mostly small such as $32 \times 32 \times 32$ in
+~\cite{deng2017hand3d, ge2017_3D}, it sacrifices the detail of depth image. We employ
+an eclectic solution, the background is omitted in our 3D representation, and the space
+is sliced into 8 pieces to preserve more details. The exemplar is shown in Figure
 ~\ref{fig:spatial network}.
 
-The 3D volumetric representation keep the structure of hand, we can clearly find all
+The sliced 3D volumetric representation keeps the structure of hand, we can clearly find all
 finger tips in the first layer, with a low cost for memory at the mean time. Nevertheless,
-the depth information is deprecated in our 3D volumetric representation, it makes harder
-to estimate the depth of hand joints. To obtain the structure information and depth
-information simultaneously, we combine these information from depth image and 3D volumetric
-representation together. In Figure.~\ref{fig:spatial network}, we employ a Deep-Fusion
-framework~\cite{chen2016multi} to fuse the features and named as \emph{Spatial Network}.
+the depth information is deprecated in our sliced 3D volumetric representation, it makes harder
+to estimate the hand joint locations. To obtain the hand structure and depth
+information simultaneously, we input depth image and 3D volumetric representation at the
+same time. In Figure~\ref{fig:spatial network}, we employ Deep-Fusion
+framework~\cite{Chen_2017_CVPR} to fuse the features and the network is named as \emph{Spatial Network}.
+The left part is same as \emph{Basic Network}, and the right part is similar with the left part.
 
-In the \emph{Spatial Network}, the different features are fused together hierarchically.
+In \emph{Spatial Network}, the different features are fused together hierarchically.
 which could be expressed as:
 \begin{equation}\label{eq:deep fusion}
 \begin{aligned}
 &f_0 = f_{depth} \oplus f_{3D} \\
-&f_l = \textbf{H}_l^{depth}(f_{l-1}) \oplus \textbf{H}_l^{3D}(f_{l-1}) \\
+&f_l = \mathbf{H}_l^{depth}(f_{l-1}) \oplus \mathbf{H}_l^{3D}(f_{l-1}) \\
 &\forall l=1, \dots , L
 \vspace{1em}
 \end{aligned}
 \end{equation}
 The $\oplus$ is element-wise mean, $f_{depth}$ and $f_{3D}$ are the features output from
-two pooling layers, $\textbf{H}$ is the transformation for features,
+two pooling layers, $\mathbf{H}$ is the transformation for features,
 $l$ is the index for layer.
 
 Owing to the several fully connected layers, the network tends to overfitting, so we use
-an auxiliary loss as the regularization as well as dropout. In Figure.~\ref{fig:spatial network},
+an auxiliary loss as the regularization as well as dropout. In Figure~\ref{fig:spatial network},
 every fully connected layer is followed by a dropout layer, the nodes are dropout randomly
-with 30\% probability. For the purpose of obtaining more representative capability for each input
-, the auxiliary paths are added in training stage. As shown in the green boxes, layers in the
+with 30\% probability. For the purpose of obtaining more representative capability for each input,
+the auxiliary paths are added in training stage. As shown in the green boxes, the layers in the
 auxiliary paths are same as the main network, the layers connected by the blue dotted line
-share parameters. And in the training stage, the total losses are composed by three losses,
+share parameters. And in the training stage, the total losses are consist of three losses,
 i.e. three regression loss in auxiliary paths and main network. When testing, the auxiliary
 pathes are removed.
 \begin{figure*}[t]
     \centering
     \includegraphics[width=0.5\linewidth]{src/network/spatial.pdf}
-    \caption{Spatial Network}
+    \caption{\emph{Spatial Network}. Depth image and sliced 3D volumetric representation are input
+    into \emph{Spatial Network}, the different features are fused together hierarchically. For the
+    purpose of obtaining more representative capability for each input, the auxiliary paths are added
+    in training stage, and the layers in the auxiliary paths are same as the main network. In the training
+    stage, the total losses are consist of three losses, i.e. three regression loss in auxiliary paths
+    and main network. When testing, the auxiliary pathes are removed.}
 \label{fig:spatial network}
 \end{figure*}
 
 \subsection{Gate Network}\label{sec:gate network}
 The foregoing \emph{Temporal Network} and \emph{Spatial Network} stand in the different views
-for estimating the joints, we name the predictions as $\J_{temp}$ and $\J_{spa}$. To improve
-the performance, we want to ensemble their advantages for last prediction. Jacob. et al
-proposed Mixture of Experts (MoE) ~\cite{jacobs1991adaptive} for adaptively integrating
-different regressors.
+for estimating the joints, we name the predictions as $\mathit{J}_{temp}$ and $\mathit{J}_{spa}$. To improve
+the performance, we ensemble them via Mixture of Experts (MoE)~\cite{jacobs1991adaptive}, by adaptively integrating
+different regressors for the last prediction.
 
 \emph{Gate Network} weights two predictors, and give out the last prediction according to
 the weights of predictions as follow:
 \begin{equation}\label{eq:gate network}
 \centering
-\textbf{J}_{out} = \textbf{g}_1 \J_{temp} + \textbf{g}_2 \J_{spa}
+\mathit{J}_{out} = \mathit{g}_1 \mathit{J}_{temp} + \mathit{g}_2 \mathit{J}_{spa}
 \end{equation}
-where $\textbf{g}_1$ and $\textbf{g}_2$ are the weight of \emph{Gate Network}. The final prediction
-$\textbf{J}_{out}$ is estimated as the weighted sum of each prediction.
+where $\mathit{g}_1$ and $\mathit{g}_2$ are the weight of \emph{Gate Network} and $\mathit{g}_1, \mathit{g}_2 \in
+\mathbb{R}^{3 \times K}$. The final prediction $\mathit{J}_{out}$ is estimated as the weighted sum of each prediction.
 
 Because \emph{Temporal Network} considers the temporal information and \emph{Spatial Network}
 extracts the spatial information, mixture of experts infer the hand joint location based on
-spatial-temporal features. Comparing with baseline network, \emph{Gate Network} outputs higher
-dimension weights, so we employ a more complex network by increasing the size of convolution kernels.
-Specifically, we double the parameters in the gate network than the baseline network, and employ Dropout~\cite{srivastava2014dropout} after
-the fully connected layer to prevent overfitting (the detail network is shown in Appendix~\ref{sec:gate network architecture}).
-
-
-%\begin{figure}[t]
-%    \centering
-%    \includegraphics[width=1\linewidth]{}
-%    \caption{Gating Network}
-%\label{fig:gating network}
-%\end{figure}
-
+spatial and temporal features. Comparing with \emph{Basic Network}, \emph{Gate Network} outputs higher
+dimension weights, so we employ a more complex network by increasing the number of convolution kernels.
+Specifically, we double the parameters in \emph{Gate Network} than \emph{Basic Network}.
 
 %-------------------------------------------------------------------------
 \section{Experiments}\label{sec:experiments}
@@ -330,63 +385,97 @@ large, these makes the estimation hard. In the test sequences, the finger moveme
 than the train sequences.
 
 \subsubsection{Evaluation Metrics}\label{sec:evaluation metrics}
-The evaluation follows the standard metrics proposed in~\cite{tompson2014real}, including a
-plot of the percentage of test samples given a maximum distance from ground truth and average
-distance error (in mm). There are totally 36 annotated joints in NYU dataset, but we only
+The evaluation follows the standard metrics proposed in~\cite{oberweger2015hands}, including accuracy 
+, pre-joint error distance and average error distance. As is mentioned above, we denote $j_{in}$ as 
+the predicted $i$-th joint location in the $n$-th frame, $j_{in}^{gt}$ is the corresponding ground 
+truth. The total number of frames is denoted as $N$, and $K$ is the number of joints in a frame. 
+
+Per-joint error distance calculates the average Euclidean distance between the predicted 
+joint location and the ground truth in 3D space.
+\begin{equation}
+err_i = \frac{\sum_n^N(\|j_{in} - j_{in}^{gt} \|)}{N}
+\end{equation}
+
+Average error distance computes the mean distance for all joints.
+\begin{equation}
+ave = \frac{\sum_i^K{err_i}}{K}
+\end{equation}
+
+Accuracy is the fraction of frames that all predicted joints from the ground truth in a 
+frame below the given distance threshold $\delta$.
+\begin{equation}
+acc_{\delta} = \frac{\mathbbm{1}(max_i(\| j_{in} - j_{in}^{gt}\|) \leq \delta)}{N}
+\end{equation}
+where $\mathbbm{1}(*)$ is the indicator function equal to 1 only if $*$ is True.
+
+Additionally, there are totally 36 annotated joints in NYU dataset, but we only
 evaluate a subset of 14 joints for a fair comparison. In addition to ICVL dataset
-, we evaluate 16 annotated joints for comparison.
+, we evaluate total 16 annotated joints for comparison.
 
 \subsubsection{Implementation Details}\label{sec:implementation}
 We implement the training and testing with Caffe\cite{jia2014caffe}. The segmentation step
 follows~\cite{oberweger2015hands} to extract a cube from the depth image, and the cube is
-resized to a 128x128 depth image with the depth value normalized to [-1, 1]. Moreover, we
+resized to a $128 \times 128$ depth image with the depth value normalized to [-1, 1]. Moreover, we
 augment the dataset by random rotation.
 
-The three components of network are trained separately. The baseline network is pre-trained for
-\emph{Temporal Network} and \emph{Spatial Network} with Adam, we set the learning rate as 1e-3
+The three components of network are trained separately. \emph{Basic Network} is pre-trained for
+\emph{Temporal Network} with Adam, we set the learning rate as 1e-3
 and train the network for 100,000 iterations, the learning rate is divided by 10 every 20,000
 iterations and the mini-batch is set as 128. \emph{Spatial Network} is trained from scratch,
-with the same setting as baseline network. \emph{Temporal Network} trained based on the baseline
-network with the parameters fixed, and the configuration is same except that we only train the
+with the same setting as \emph{Basic Network}. \emph{Temporal Network} trained based on the \emph{Basic Network}
+with the parameters fixed, and the configuration is same except that we only train the
 network for 50,000 iterations.  To train the \emph{Gate Network}, the parameters are all fixed
 but the parameters in gate branch and the network is trained for 50,000 iterations. Our training
-takes place on machines equipped with a 12GB Titan X GPU and 64GB memory.
+takes place on machines equipped with a 12GB Titan X GPU and 64GB of RAM.
 
 \subsection{Experiment Results}\label{sec:experiment results}
 \subsubsection{Comparison with State-of-art}\label{sec:comparison}
-We compare our approach with several CNN based hand pose estimation method. We compare with
-four methods~\cite{tompson2014real, oberweger2015hands, oberweger2015training, zhou2016model}
-on NYU dataset, and compare with two methods~\cite{oberweger2015hands, zhou2016model} on ICVL
-dataset. The mean error of different methods is shown in Tab.~\ref{tab:mean error NYU} and Tab.
-~\ref{tab:mean error ICVL} as well as average error shown in Figure.~\ref{fig:Qualitative result NYU}.
+We compare our approach with several state-of-art hand pose estimation methods~\cite{tompson2014real,oberweger2015hands, 
+oberweger2015training, zhou2016model,tang2014latent,ge2017_3D,sinha2016deephand}. What is worth mention that some methods 
+provide predicted joints but some not, we calculate the metrics of some methods~\cite{tompson2014real, oberweger2015hands,
+oberweger2015training,zhou2016model,tang2014latent} available online and estimate the others from the figures in their paper. 
+The average error distance of different methods is shown in Table~\ref{tab:mean error NYU} and Table~\ref{tab:mean error ICVL}.
+% Table generated by Excel2LaTeX from sheet 'comparisonNYU'
+\begin{table}[htbp]
+  \centering
+  \caption{Comparison of different methods on NYU dataset.}
+    \begin{tabular}{|l|c|}
+    \hline
+    Methods & \multicolumn{1}{l}{Average joint error (mm)} \\
+    \hline
+    HeatMap~\cite{tompson2014real} & 21.02 \\
+    DeepPrior~\cite{oberweger2015hands} & 19.73 \\
+    Feedback~\cite{oberweger2015training} & 15.97 \\
+    DeepModel~\cite{zhou2016model} & 16.90 \\
+    Lie-X~\cite{xu2017lie} & 14.51 \\
+    Ours  & 14.83 \\
+    \hline
+    \end{tabular}%
+  \label{tab:mean error NYU}%
+\end{table}%
 
-\begin{table}[htbp]\footnotesize
-\centering
-    \begin{tabular}{|c|c|c|c|c|c|}
+% Table generated by Excel2LaTeX from sheet 'average joint error'
+\begin{table}[htbp]
+  \centering
+  \caption{Comparison of different methods on ICVL dataset.}
+    \begin{tabular}{|l|r|}\hline
+    Methods & \multicolumn{1}{l}{Average joint error (mm)} \\\hline
+    LRF~\cite{tang2014latent}   &  0\\
+    DeepPrior~\cite{oberweger2015hands} &  0\\
+    DeepModel~\cite{zhou2016model} &  0\\
+    Ours  &  0\\
     \hline
-    Methods        &\cite{tompson2014real} &\cite{oberweger2015hands} &\cite{oberweger2015training} &\cite{zhou2016model} &Ours\\
-    \hline
-    Mean Error(mm) &21.0                   &20.8                      &15.9                         &16.9                 &14.8\\
-    \hline
-\end{tabular}
-\vspace{1em}
-\caption{Comparison between our approach and state-of-art methods for mean error.}
-\label{tab:mean error NYU}
-\end{table}
+    \end{tabular}%
+  \label{tab:mean error ICVL}%
+\end{table}%
+\paragraph{NYU Dataset}\label{sec:nyu dataset}
+We compare our method with several approaches on NYU dataset, including 3DCNN~\cite{ge2017_3D}, DeepModel~\cite{zhou2016model}, 
+Feedback~\cite{oberweger2015training}, DeepPrior~\cite{oberweger2015hands}, Matrix~\cite{sinha2016deephand}, HeatMap~\cite{tompson2014real}, 
+Lie-X~\cite{xu2017lie}. The accuracy and the pre-joint error distance are shown in Figure~\ref{fig:comparison NYU}. The result reveals 
+that our proposed method has a comparable performance with state-of-art methods. Our method outperform most methods except 3DCNN and Lie-X. 
+Comparing with 3DCNN, our method is better around 9-12mm and 60-80mm. Lie-X stands out over the range of 20-48mm, but our method overtakes 
+at other times. 
 
-\begin{table}[htbp]\footnotesize
-\centering
-    \begin{tabular}{|c|c|c|c|}
-    \hline
-    Methods        &\cite{oberweger2015hands} &\cite{zhou2016model} &Ours\\
-    \hline
-    Mean Error(mm) &0                      &0                       &0\\
-    \hline
-    \end{tabular}
-\vspace{1em}
-\caption{Comparison between our approach and state-of-art methods for mean error.}
-\label{tab:mean error ICVL}
-\end{table}
 
 \begin{figure*}[t]\footnotesize
 \centering
@@ -407,9 +496,12 @@ dataset. The mean error of different methods is shown in Tab.~\ref{tab:mean erro
     \caption{Qualitative results for NYU dataset.}
     \label{fig:Qualitative result NYU}
 \end{figure*}
+
+\paragraph{ICVL Dataset}\label{sec:icvl dataset}
+On ICVL dataset, we compare our proposed method against three approaches~\cite{tang2014latent,oberweger2015hands,zhou2016model}.
 \subsubsection{Ablation}\label{sec:ablation}
 To show the effects of different parts in mixed network, we do the ablation experiments. We
-show the test result on NYU and ICVL dataset in Figure.~\ref{fig:Qualitative result ablation}.
+show the test result on NYU and ICVL dataset in Figure~\ref{fig:Qualitative result ablation}.
 
 \begin{figure*}[t]\footnotesize
 \centering
