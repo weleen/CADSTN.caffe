@@ -268,7 +268,15 @@ if __name__ == '__main__':
         print("Zhou et al. IJCAI 2016")
         print("Mean error: {}mm".format(hpe_deepmodel.getMeanError()))
         plot_list.append(('Zhou et al.(IJCAI 2016)', hpe_deepmodel))
-    
+        
+        # ijcv lie-x 
+        data_lie = di.loadBaseline('../result/IJCV16/IJCV16_lie_hand_jnts_estm_result_uvd.txt')
+        hpe_lie = NYUHandposeEvaluation(gt3D, data_lie)
+        hpe_lie.subfolder += 'comparison/'
+        print("Xu et al. IJCV 2017")
+        print("Mean error: {}mm".format(hpe_lie.getMeanError()))
+        plot_list.append(('Xu et al.(IJCV 2017)', hpe_lie))
+
         # plot comparison result
         # NOTE: figure is in mix_100000 folder
         hpe[0].plotEvaluation('comparison', methodName='Ours', baseline=plot_list)
