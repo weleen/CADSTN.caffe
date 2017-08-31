@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Name of the job: PBS can read the command after #, which shell ignores them
-#PBS -N train_depth
+#PBS -N train_3D
 
 # Job asks for 1 node (computer) and 1 processing number per node (total 4 GPUs each node)
 # Now we want to use 2 GPUs, then we set ppn=2.

@@ -264,7 +264,7 @@ class HandposeEvaluation(object):
         plt.xlabel('Distance threshold / mm')
         plt.ylabel('Fraction of frames within distance / %')
         plt.ylim([0.0, 100.0])
-        ax.grid(True)
+        ax.grid(True, which='both')
         # Put a legend below current axis
         handles, labels = ax.get_legend_handles_labels()
         # lgd = ax.legend(handles, labels, loc='lower right', ncol=1) #, bbox_to_anchor=(0.5,-0.1)

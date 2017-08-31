@@ -52,7 +52,6 @@ def loadGt(gt_file):
     :param gt_file: path to ground truth file
     :return: joint in xyz coordinate
     """
-    #gt_file = '../dataset/ICVL/test_seq_1.txt'
     gt = []
     with open(gt_file, 'r') as f:
         lines = f.readlines()
@@ -84,7 +83,7 @@ def loadPredFile(filepath, estimation_mode='uvd'):
         dim = 3
         return joints.reshape(n, d/dim, dim)
 
-def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
+def predictJoints(model_name, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
     """
     predict joints in xyz coordinate
     predictJoints(str, str, bool, str, str) -> (np.array, str)
@@ -95,6 +94,8 @@ def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cp
     :return: predicted_joints: predicted joints
              file_name: file name store the joints
     """
+    model_name = model[0]
+    weights_num = model[1]
     model_def = '../models/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '.prototxt'
     model_weights = '../weights/' + dataset + '/hand_' + model_name + '/hand_' + model_name + '_iter_' + weights_num + '.caffemodel'
 
@@ -107,13 +108,21 @@ def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cp
     net = caffe.Net(model_def, model_weights, caffe.TEST)
 
     # extract seq_size (video num), frame_size (frames in video) and joint_size (dimension need to regress) from the blob
-    if model_name == 'baseline':
+    if 'baseline' in model_name:
         frame_size, joint_size = net.blobs['joint_pred_baseline'].data.shape
         seq_size = 1
-    else:
-        frame_size, seq_size, joint_size = net.blobs['pred_joint'].data.shape
+    elif '3D' in model_name:
+        if '3D_and_depth' in model_name:
+            frame_size, joint_size = net.blobs['joint_pred_depth_3D'].data.shape
+        else:
+            frame_size, joint_size = net.blobs['joint_pred_3D'].data.shape
+        seq_size = 1
+    elif 'mix' in model_name:
+        frame_size, joint_size = net.blobs['joint_pred_mix'].data.shape
+        seq_size = 1
+    else: # lstm
+        frame_size, seq_size, joint_size = net.blobs['pred_joint_lstm'].data.shape
     dim = 3 # estimate 3 dimension x, y and z
-
     # recognize different dataset
     if dataset == 'ICVL':
         test_num = 702
@@ -151,8 +160,18 @@ def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cp
             row = j / seq_size
             col = j % seq_size
             if model_name == 'baseline':
-                predicted_joints[int(ind)] = (net.blobs['joint_pred'].data[j].reshape(joint_size / dim, dim) * \
-                                              125 + net.blobs['com'].data[j].reshape(1, 3)).copy()
+                predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_baseline'].data[j].reshape(joint_size / dim, dim) * \
+                        net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
+            elif '3D' in model_name:
+                if '3D_and_depth' in model_name:
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_depth_3D'].data[j].reshape(joint_size / dim, dim) * \
+                            net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
+                else:
+                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_3D'].data[j].reshape(joint_size / dim, dim) * \
+                            net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
+            elif 'mix' in model_name:
+                predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_mix'].data[j].reshape(joint_size / dim, dim) * \
+                        net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
             else:
                 predicted_joints[int(ind)] = (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
                                               * net.blobs['config'].data[j][0] / 2 \
@@ -181,10 +200,15 @@ def predictJoints(model_name, weights_num, store=True, dataset='ICVL', gpu_or_cp
 
 
 if __name__ == '__main__':
-
-    # test NYU dataset
-    gt_file = '../dataset/ICVL/test_seq_1.txt'
-    gt3D = loadGt(gt_file)
+    # test ICVL dataset
+    di = ICVLImporter('../dataset/ICVL/', cacheDir='../dataset/cache')
+    gt3D = []
+    sequence1 = di.loadSequence('test_1', docom=True)
+    sequence2 = di.loadSequence('test_2', docom=True)
+    testSeq = [sequence1, sequence2]
+    for seq in testSeq:
+        gt3D.extend([j.gt3Dorig for j in seq.data])
+    gt3D = np.array(gt3D)
 
     if DEBUG:
         print 'gt3D.shape = ', gt3D.shape
@@ -195,17 +219,13 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    model.append('baseline')
-    #model.append('lstm_small_frame_size_no_concate')
-    #model.append('lstm_small_frame_size')
-    weight_num.append('150000')
-    #weight_num.append('200000')
-    #weight_num.append('200000')
-    assert len(model) == len(weight_num), 'length is not equal!'
-    assert len(model) == len(weight_num), 'length is not equal!'
-
+    #model.append(('baseline','100000'))
+    #model.append(('3D_and_depth', '100000')) 
+    #model.append(('lstm','100000')) 
+    model.append(('mix', '100000'))
+    
     for ind in xrange(len(model)):
-        joints, file_name = predictJoints(model[ind], weight_num[ind])
+        joints, file_name = predictJoints(model[ind])
         pred_joints.append(joints)
         eval_prefix.append('ICVL_' + model[ind] + '_' + weight_num[ind])
         if not os.path.exists('../eval/'+eval_prefix[ind]+'/'):
@@ -228,23 +248,32 @@ if __name__ == '__main__':
         print("{}".format([hpe[ind].getJointMeanError(j) for j in range(joints[0].shape[0])]))
         print("{}".format([hpe[ind].getJointMaxError(j) for j in range(joints[0].shape[0])]))
 
-    print "Testing baseline"
-    #################################
-    # BASELINE
-    # Load the evaluation
-    di = ICVLImporter('../dataset/ICVL/', cacheDir='../dataset/cache/')
-    data_baseline = di.loadBaseline('../dataset/ICVL/Results/LRF_Results_seq_1.txt')
+    plot_list = []
+    # LRF, result in two sequences
+    data_lrf = di.loadBaseline('../result/LRF/LRF_Results.txt')
+    hpe_lrf = ICVLHandposeEvaluation(gt3D, data_lrf)
+    hpe_lrf.subfolder += 'comparison'
+    print("Tang et al. ICCV 2014")
+    print("Mean error: {}mm".format(hpe_lrf.getMeanError()))
+    plot_list.append("LRF", hpe_lrf)
 
-    hpe_base = ICVLHandposeEvaluation(gt3D, data_baseline)
-    hpe_base.subfolder += eval_prefix[0]+'/'
-    print("Mean error: {}mm".format(hpe_base.getMeanError()))
+    # DeepPrior, result in first sequence
+    data_deepprior = di.loadBaseline('../result/CVWW15/CVWW15_ICVL_Prior-Refinement.txt')
+    hpe_deepprior = ICVLHandposeEvaluation(gt3D[:702], data_deepprior) # only first sequence
+    hpe_deepprior.subfolder += 'comparison'
+    print("Oberweger et al. CVWW 2015")
+    print("Mean error: {}mm".format(hpe_deepprior.getMeanError()))
+    plot_list.append("DeepPrior", hpe_deepprior)
+    
+    # ijcai16 deepmodel
+    data_deepmodel = di.loadBaseline('../result/IJCAI16/IJCAI16_ICVL.txt')
+    hpe_deepmodel = NYUHandposeEvaluation(gt3D, data_deepmodel)
+    hpe_deepmodel.subfolder += 'comparison/'
+    print("Zhou et al. IJCAI 2016")
+    print("Mean error: {}mm".format(hpe_deepmodel.getMeanError()))
+    plot_list.append(('DeepModel', hpe_deepmodel))
 
-    plot_list = zip(model, hpe)
-    hpe_base.plotEvaluation(eval_prefix[0], methodName='Tang et al.', baseline=plot_list)
-
-    Seq2_1 = di.loadSequence('test_seq_1')
-    Seq2_2 = di.loadSequence('test_seq_2')
-    testSeqs = [Seq2_1, Seq2_2]
+    hpe[0].plotEvaluation('comparison', methodName='Ours', baseline=plot_list)
 
     for index in xrange(len(hpe)):
         ind = 0
@@ -258,5 +287,5 @@ if __name__ == '__main__':
                 t=transformPoint2D(jtI[joint], i.T)
                 jtI[joint, 0] = t[0]
                 jtI[joint, 1] = t[1]
-            hpe[index].plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix[index], ind))
+            hpe[index].plotResult(i.dpt, i.gtcrop, jtI, "{}_{}".format(eval_prefix[index], ind), showGT=False)
             ind+=1
