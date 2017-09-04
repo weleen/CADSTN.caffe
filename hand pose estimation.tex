@@ -34,7 +34,7 @@
 
 
 \begin{document}
-\title{Spatial-Temporal Hand Pose Estimation For a Sequence of Depth Images}
+\title{Mixture of Spatial-and-Temporal Network for Hand Pose Estimation}
 
 \author{{Anonymous}% <-this % stops a space
 \thanks{Anonymous}}
@@ -47,12 +47,19 @@
 \maketitle
 
 \begin{abstract}
-Abstract
-\end{abstract}
+As an essential and challenge problem in computer vision, hand pose estimation aims to estimate the hand joint locations. Current hand pose
+estimation methods concentrate on the spatial structure of human hand but omit the temporal coherence of consecutive frames.
+Motivated by this observation, we present a hand pose estimation method called Mixture of Spatial-and-Temporal Network (\textbf{MSTN})
+by keeping a watchful eye on accuracy, efficiency, robustness and stability. We extract the temporal coherence via a set of long-short
+term memory (LSTM) nodes and the spatial information by a Deeply-fusion framework simultaneously, then predict the hand pose via spatial
+and temporal features. In a nutshell, our proposed \textbf{MSTN} is capable of make use of correlation between images as well as spatial
+information. Our method is examined on two publicly available datasets, the experiments demonstrate that our proposed approach achieves
+comparable performance with state-of-art methods and runs in real-time (around 75 fps).
 
+\end{abstract}
 % Note that keywords are not normally used for peerreview papers.
 \begin{IEEEkeywords}
-Hand pose estimation, Recurrent Network, Mixture of Experts.
+Hand pose estimation, LSTM, Mixture of Experts, Deeply-Fusion.
 \end{IEEEkeywords}
 
 
@@ -74,31 +81,31 @@ far, there are a plenty of researches on this topic~\cite{guo2017region, quach20
 wan2017crossing}, and major progresses have been made thanks to the improvement in deep learning
 and low cost depth sensors. Nevertheless, hand is the most complex human part to analyse, and the
 problem is still far from solved, it is still difficult to estimate hand pose in the practical scene
-owing to several reasons. (1) the image quality is poor because of the commercial depth sensor, (2)
+owing to several reasons: (1) the image quality is poor because of the commercial depth sensor, (2)
 hand is a articulated object with high degrees of freedom (DoFs), the fingers are similar with each
 other and apt to occlude each other, (3) in a real scenario, the application must process the depth
 image real-timely, which increase the difficulty for estimation.
 
 In general, the purpose of hand pose estimation is to estimate the 3D location of joints. Most existing
 methods concentrate on the hand spatial structure modelling, such as the nodes in regression decision
-forest and sparated stage in cascaded CNN, while ignoring the coherence between the current frame and
+forest and separated stages in cascaded CNN, while ignoring the coherence between the current frame and
 the previous frame. For instance, when we humans find the joint locations, we usually search in the
 patches around the previous frame's joints. It reveals that the previous frame's pose provides abundant
 information for pose estimation. However, many existing methods~\cite{oberweger2015hands, ge2017_3D} learn
-the mapping from depth image or 3D voluetric representation to the hand pose. Some methods
+the mapping from depth image or 3D volumetric representation to the hand pose. Some methods
 ~\cite{sun2015cascaded, ye2016spatial} explicitly model the hierarchical hand structure in addition. In
 practice, depth images are in selected from videos, and video has time-varying dynamic properties.
 
-\begin{figure}[t]
+\begin{figure*}[t]
     \centering
     \includegraphics[width=1\linewidth]{src/network/architecture.pdf}
-    \caption{The overview of architecture. The red branch is the \emph{Gate Network}, the blue
-    branch is the expert networks. \emph{Temporal Network} extract the correlated features considering
-    the sequentiality of input images and \emph{Spatial Network} employ the Deeply-fusion framework to
-    fuse depth image and 3D volumetric representations, \emph{Gate Network} weights the prediction
-    from each expert.}
+    \caption{The overview of total network. The network is composed of three parts: \emph{Temporal Network}, 
+    \emph{Spatial Network} and \emph{Gate Network}. \emph{Temporal Network} extract the correlated features 
+    considering the sequentiality of input images via LSTM and \emph{Spatial Network} employ the Deeply-Fusion 
+    framework to fuse depth image and sliced 3D volumetric representations, \emph{Gate Network} weights the 
+    prediction from each expert and get the final prediction.}
 \label{fig:architecture}
-\end{figure}
+\end{figure*}
 
 Motivated by the observation above, we propose a method focus on the spatial structure as well as
 temporal information. The different viewpoint for solving the problem is modelled as different part in
@@ -115,18 +122,19 @@ in other words, the history is memorized by the network and affects the current 
 
 For the sake of accurately estimating the hand pose, we ensemble the aforementioned two networks as an
 integration by Mixture of Experts~\cite{jacobs1991adaptive}. The networks for prediction task are called
-\emph{experts}, and via \emph{gater} to outputs a set of weights, the final prediction is obtained by the
+\emph{experts}, and via \emph{gater} to output a set of weights, the final prediction is obtained by the
 weighted combination of the experts outputs. By means of this ensemble approach, spatial information and temporal
 coherence are thought to have in mind as a unified scheme. Moreover, the estimation network is evaluated on
-two public datasets. Due to the practicability and efficiency, the network could run in in real-time on the GPU and achieve
+two public datasets. Due to the practicability and efficiency, the network could run in real-time on the GPU and achieve
 the comparable or better results than state-of-art methods. We summary our contribution in the following two folds:
 \begin{itemize}
   \item
   We integrate features from depth map and sliced 3D volumetric representation for hand pose
   estimation by deep fusion network. The experiment reveals that 3D volumetric representation
   benefits the hand pose estimation. Furthermore, we model the coherence among frames by LSTM,
-  and implement a hand pose estimation system with an eye to accuracy, efficiency, robustness
-  and stability simultaneously.
+  and implement a hand pose estimation system named \textbf{MSTN} (\textbf{M}ixture of
+  \textbf{S}patial-and-\textbf{T}emporal \textbf{N}etwork) with an eye to accuracy, efficiency,
+  robustness and stability simultaneously.
   \item
   Our proposed method could run about 75 fps on a single GPU, which meet the real-time demand
   in hand pose estimation. Moreover, we evaluate our approach on two public datasets (e.g. NYU
@@ -184,7 +192,33 @@ and model fitting, the reinitialization step infer the distribution over hand po
 in a single frame, and refine occluded joints in a sequence.
 
 \subsection{LSTM}
-introduce LSTM.
+Due to the feedback loop structure in the recurrent neural network (RNN), it possesses powerful 'long-term dependencies'
+modeling capability, and is widely used in computer vision tasks. In general, RNN is difficult to train due to the vanishing
+gradient and error blow up problems~\cite{graves2012supervised}. To address these problems, plenties of works design the new
+structure based on RNN, and RNN with Long-Short Term Memory (LSTM) neurons~\cite{hochreiter1997long,zaremba2014learning} is the
+most frequently-used variant. As shown in Figure~\ref{fig:lstm cell}, a LSTM memory block with a single cell is illustrated. 
+It contains three gates: the input gate $i$, the forget gate $g$ and the output gate $o$, the memory is manipulated by these gates, 
+which could be erased, updated and read.
+
+\begin{figure}[htbp]
+\centering
+    \includegraphics[width=1\linewidth]{src/network/lstm.pdf}
+    \caption{Long-Short Term Memory (LSTM) cell. The internal memory is manipulated by several gates.}
+    \label{fig:lstm cell}
+\end{figure}
+
+Given an input sequence $\mathbf{x} = (x_0, x_1, \dots, x_{T-1})$, the hidden state of LSTM layer $h = (h_0, h_1, \dots, h_{T-1})$ 
+and the output $y = (y_0, y_1, \dots, y_{T-1})$ are derived as follows\cite{zaremba2014learning}:
+\begin{equation}
+\begin{aligned}
+&i_t := \sigma(W_{hi} * h_{t-1} + W_{xi} * x_t + b_i) \\
+&f_t := \sigma(W_{hf} * h_{t-1} + W_{xf} * x_t + b_f) \\
+&o_t := \sigma(W_{ho} * h_{t-1} + W_{xo} * x_t + b_o) \\
+&c_t := (f_t \odot c_{t-1}) + (i_t \odot tanh(W_{hc} * h_{t-1} + W_{xc} * x_t + b_c)) \\
+&h_t := o_t \odot tanh(c_t)
+\end{aligned}
+\end{equation}
+where $\sigma(\cdot)$ is sigmoid function, $tanh(\cdot)$ is tanh function, $\odot$ is element-wise product, and matrices $W_{h*}, W_{x*}, b_{*}$ ($*$ is in $i, f, o, c$) are shared between cells.
 
 %------------------------------------------------------------------------
 \section{Hand Pose Estimation}\label{sec:hand pose estimation}
@@ -209,15 +243,15 @@ features into a correlated features for estimation. Furthermore, the spatial inf
 important, many approaches focus on tree structured skeleton of hand to address this problem (e.g.
 ~\cite{li20153d, wan2016direction, ye2016spatial}). And 3D volumetric representation could well reserve
 the spatial information~\cite{deng2017hand3d} for solving pose estimation in 3D. We employ the
-Deeply-fusion framework ~\cite{wang2016deeply} to fuse the features from depth image and sliced 3D
+Deeply-Fusion framework ~\cite{wang2016deeply} to fuse the features from depth image and sliced 3D
 volumetric representations, which is called \emph{Spatial Network}. \emph{Temporal Network} and
 \emph{Spatial Network} predict hand joint locations based on different features, which plays a
 role of experts in the Mixture of Experts (MoE). In MoE, the different experts give out their
 predictions and \emph{Gate Network} weights the predictions.
 
-In this section, we introduce our method for hand pose estimation step by step.
-The \emph{Temporal Network} and \emph{Spatial Network} we employed are discussed in Section
-~\ref{sec:temporal netowork} and Section~\ref{sec:spatial network}, and \emph{Gate Network} is
+We introduce our method for hand pose estimation step by step. \emph{Basic Network} is introduced
+in Section~\ref{sec:basic network}. The \emph{Temporal Network} and \emph{Spatial Network} we
+employed are discussed in Section~\ref{sec:temporal netowork} and Section~\ref{sec:spatial network}, and \emph{Gate Network} is
 discussed in Section~\ref{sec:gate network}.
 
 
@@ -236,7 +270,7 @@ We first propose \emph{Basic Network} as the basic network for estimation. As sh
 of several stacked convolution layers, with max-pooling layer do downsampling operation in between
 them. The fully connected layers perform as a regressor for last regression. In addition, the activation
 function used in network is ReLU, which provides non linear ability and improves the robustness. To resist
-ooverfit, the Dropout is adopted in fully connected layers.
+overfitting, the Dropout is adopted in fully connected layers.
 
 The \emph{Basic Network} performs a pre-trained network for \emph{Temporal Network}, and it could get a
 satisfied result as shown in the experiments.
@@ -244,7 +278,7 @@ satisfied result as shown in the experiments.
 \subsection{Temporal Network}\label{sec:temporal netowork}
 \begin{figure}[t]
     \centering
-    \subfloat[Basic Netowrk]{
+    \subfloat[Basic Network]{
         \label{fig:basic network}
         \begin{minipage}[t]{116pt}
             \centering
@@ -253,14 +287,14 @@ satisfied result as shown in the experiments.
     }
     \subfloat[Temporal Network]{
         \label{fig:temporal network}
-        \begin{minipage}[t]{110pt}
+        \begin{minipage}[t]{116pt}
             \includegraphics[width=1\linewidth]{src/network/temporal.pdf}
         \end{minipage}
     }
 \caption{\emph{Basic Network} and \emph{Temporal Network}. In \emph{Basic Network}, convolution
-layers and fully connected layers are followed by activation function is relu, and dropout is
-adopted to resist overfit. In \emph{Temporal Network}, the parameters in previous layers are
-borrowed from \emph{Basic Network}, lstm layer and last fully connected layer are trained when
+layers and fully connected layers are followed by activation function is ReLU, and dropout is
+adopted to resist overfitting. In \emph{Temporal Network}, the parameters in previous layers are
+borrowed from \emph{Basic Network}, LSTM layer and last fully connected layer are trained when
 the input is a sequence of images.}
 \label{fig:basic and lstm network}
 \end{figure}
@@ -273,7 +307,7 @@ and easy to train. The LSTM network is mostly used for modeling the long term te
 simultaneously. We do several modifications to extract robust features and have better result with
 temporal information.
 
-As is shown in Figure~\ref{fig:temporal network}, a sequence of frames $\{I_1, I_2, \dots, I_N\}$ is
+As is shown in Figure~\ref{fig:temporal network}, a sequence of depth images $\{I_1, I_2, \dots, I_N\}$ is
 taken as input and the network gives out the estimated pose. Think about the $t$-th depth image $I_t$,
 the image flow through the convolution network and the feature extracted is denoted as follows,
 \begin{equation}
@@ -289,7 +323,7 @@ h_t=f_{\theta_l}(h_{t-1}, \phi(I_t))
 where $f_{\theta_l}$ is the parameters in LSTM cell. The new features and original features
 are concatenated then fed into the last fully connected layer and network give out the predictions.
 
-In the training stage, the parameters of layers before lstm layer are borrowed from \emph{Basic Network}
+In the training stage, the parameters of layers before LSTM layer are borrowed from \emph{Basic Network}
 and fixed, then we train LSTM and last fully connected layer solely.
 
 \subsection{Spatial Network}\label{sec:spatial network}
@@ -346,6 +380,13 @@ pathes are removed.
 \end{figure*}
 
 \subsection{Gate Network}\label{sec:gate network}
+\begin{figure}[t]\footnotesize
+\centering
+    \includegraphics[width=1\linewidth]{src/network/gate.pdf}
+    \caption{\emph{Gate Network}, the network outputs weights for two predictions from \emph{Spatial Network} and \emph{Temporal Network}.
+    Because the dimension of output is twice as much as the prediction, we double the kernel size compare with \emph{Basic Network}.}
+\label{fig:gate}
+\end{figure}
 The foregoing \emph{Temporal Network} and \emph{Spatial Network} stand in the different views
 for estimating the joints, we name the predictions as $\mathit{J}_{temp}$ and $\mathit{J}_{spa}$. To improve
 the performance, we ensemble them via Mixture of Experts (MoE)~\cite{jacobs1991adaptive}, by adaptively integrating
@@ -364,7 +405,7 @@ Because \emph{Temporal Network} considers the temporal information and \emph{Spa
 extracts the spatial information, mixture of experts infer the hand joint location based on
 spatial and temporal features. Comparing with \emph{Basic Network}, \emph{Gate Network} outputs higher
 dimension weights, so we employ a more complex network by increasing the number of convolution kernels.
-Specifically, we double the parameters in \emph{Gate Network} than \emph{Basic Network}.
+Specifically, we double the parameters in \emph{Gate Network} than \emph{Basic Network}, as shown in Figure~\ref{fig:gate}.
 
 %-------------------------------------------------------------------------
 \section{Experiments}\label{sec:experiments}
@@ -373,6 +414,43 @@ and ICVL~\cite{tang2014latent}, for comparison with the state-of-art methods. In
 do ablation experiments and analyse the performance of each component. We first describe our
 experiment setting.
 
+\begin{figure*}[t]\footnotesize
+\centering
+    \subfloat[]{
+        \label{fig:comparison NYU}
+        \begin{minipage}[t]{267pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU/comparison/comparison_frameswithin.pdf}
+        \end{minipage}
+    }
+    \subfloat[]{
+        \label{fig:comparison ICVL}
+        \begin{minipage}[t]{267pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/ICVL/comparison/comparison_frameswithin.pdf}
+        \end{minipage}
+    }
+    \\
+    \subfloat[]{
+        \label{fig:joint mean NYU}
+        \begin{minipage}[t]{263pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU/comparison/comparison_joint_mean.pdf}
+        \end{minipage}
+    }
+    \subfloat[]{
+        \label{fig:joint mean ICVL}
+        \begin{minipage}[t]{270pt}
+            \centering
+            \includegraphics[width=1\linewidth]{src/experiment/eval/ICVL/comparison/comparison_joint_mean.pdf}
+        \end{minipage}
+    }
+    \caption{Comparison with state-of-art methods on NYU dataset and ICVL dataset. Figure(a) and Figure(b): the
+    proportion of good frames over different thresholds on NYU dataset and ICVL dataset. Figure(c) and Figure(d):
+    per-joint error distance on NYU dataset and ICVL dataset. The palm and fingers are indexed as C: palm, T:
+    thumb, I: index, M: middle, R: ring, P: pinky, W: wrist.}
+    \label{fig:Results}
+\end{figure*}
 \subsection{Experiment Setting}\label{sec:experiment setting}
 \subsubsection{Datasets}\label{sec:datasets}
 NYU dataset is composed of 72K training and 8K testing images captured by PrimeSense. The
@@ -385,12 +463,12 @@ large, these makes the estimation hard. In the test sequences, the finger moveme
 than the train sequences.
 
 \subsubsection{Evaluation Metrics}\label{sec:evaluation metrics}
-The evaluation follows the standard metrics proposed in~\cite{oberweger2015hands}, including accuracy 
-, pre-joint error distance and average error distance. As is mentioned above, we denote $j_{in}$ as 
-the predicted $i$-th joint location in the $n$-th frame, $j_{in}^{gt}$ is the corresponding ground 
-truth. The total number of frames is denoted as $N$, and $K$ is the number of joints in a frame. 
+The evaluation follows the standard metrics proposed in~\cite{oberweger2015hands}, including accuracy
+, pre-joint error distance and average error distance. As is mentioned above, we denote $j_{in}$ as
+the predicted $i$-th joint location in the $n$-th frame, $j_{in}^{gt}$ is the corresponding ground
+truth. The total number of frames is denoted as $N$, and $K$ is the number of joints in a frame.
 
-Per-joint error distance calculates the average Euclidean distance between the predicted 
+Per-joint error distance calculates the average Euclidean distance between the predicted
 joint location and the ground truth in 3D space.
 \begin{equation}
 err_i = \frac{\sum_n^N(\|j_{in} - j_{in}^{gt} \|)}{N}
@@ -401,44 +479,83 @@ Average error distance computes the mean distance for all joints.
 ave = \frac{\sum_i^K{err_i}}{K}
 \end{equation}
 
-Accuracy is the fraction of frames that all predicted joints from the ground truth in a 
+Accuracy is the fraction of frames that all predicted joints from the ground truth in a
 frame below the given distance threshold $\delta$.
 \begin{equation}
 acc_{\delta} = \frac{\mathbbm{1}(max_i(\| j_{in} - j_{in}^{gt}\|) \leq \delta)}{N}
 \end{equation}
 where $\mathbbm{1}(*)$ is the indicator function equal to 1 only if $*$ is True.
 
-Additionally, there are totally 36 annotated joints in NYU dataset, but we only
+Additionally, there are totally 36 annotated joints on NYU dataset, but we only
 evaluate a subset of 14 joints for a fair comparison. In addition to ICVL dataset
 , we evaluate total 16 annotated joints for comparison.
 
 \subsubsection{Implementation Details}\label{sec:implementation}
-We implement the training and testing with Caffe\cite{jia2014caffe}. The segmentation step
-follows~\cite{oberweger2015hands} to extract a cube from the depth image, and the cube is
-resized to a $128 \times 128$ depth image with the depth value normalized to [-1, 1]. Moreover, we
-augment the dataset by random rotation.
+We implement the training and testing with Caffe\cite{jia2014caffe} framework. The pre-process step
+follows~\cite{oberweger2015hands}. Moreover, we augment the dataset from the available dataset.
 
+\textbf{Pre-process}
+Because the original depth image contains background, we first crop the hand out from it. The pre-process 
+stage is same as ~\cite{oberweger2015hands}. The hand detection is based on an assumption that hand is the 
+closet object to the camera, so we extract from the depth image a cube whose center is mass of image. Then, 
+the cube is resized to a $128 \times 128$ depth image with the depth value normalized to [-1, 1] as the input 
+of network. Due to the employment of pre-process step, we need recover predicted value to 3D joint location 
+by a post-process step.
+
+\textbf{Data augmentation}
+On NYU dataset, we do augmentation by random rotation and flipping. On one side, we randomly rotate the images 
+by an angle selected from $90^\circ$ $-90^{\circ}$ and $180^{\circ}$. On the other side, we flip the image 
+vertically or horizontally. For each image in the dataset, we just generate one image by above mentioned augmentation 
+method. So the size of dataset is twice as many as original. On ICVL dataset, in-plane rotation have been applied and 
+there are 330k training samples in total, so the augmentation is not used on ICVL.
+
+\textbf{Training configuration}
 The three components of network are trained separately. \emph{Basic Network} is pre-trained for
 \emph{Temporal Network} with Adam, we set the learning rate as 1e-3
 and train the network for 100,000 iterations, the learning rate is divided by 10 every 20,000
 iterations and the mini-batch is set as 128. \emph{Spatial Network} is trained from scratch,
-with the same setting as \emph{Basic Network}. \emph{Temporal Network} trained based on the \emph{Basic Network}
+with the same setting as \emph{Basic Network}. \emph{Temporal Network} is trained based on the \emph{Basic Network}
 with the parameters fixed, and the configuration is same except that we only train the
-network for 50,000 iterations.  To train the \emph{Gate Network}, the parameters are all fixed
+network for 50,000 iterations.  To train \emph{Gate Network}, the parameters are all freezed
 but the parameters in gate branch and the network is trained for 50,000 iterations. Our training
 takes place on machines equipped with a 12GB Titan X GPU and 64GB of RAM.
 
 \subsection{Experiment Results}\label{sec:experiment results}
 \subsubsection{Comparison with State-of-art}\label{sec:comparison}
-We compare our approach with several state-of-art hand pose estimation methods~\cite{tompson2014real,oberweger2015hands, 
-oberweger2015training, zhou2016model,tang2014latent,ge2017_3D,sinha2016deephand}. What is worth mention that some methods 
-provide predicted joints but some not, we calculate the metrics of some methods~\cite{tompson2014real, oberweger2015hands,
-oberweger2015training,zhou2016model,tang2014latent} available online and estimate the others from the figures in their paper. 
-The average error distance of different methods is shown in Table~\ref{tab:mean error NYU} and Table~\ref{tab:mean error ICVL}.
-% Table generated by Excel2LaTeX from sheet 'comparisonNYU'
+We compare our approach with several state-of-art hand pose estimation methods
+~\cite{tompson2014real,wan2017crossing,oberweger2015hands,oberweger2015training,
+zhou2016model,tang2014latent,ge2017_3D,sinha2016deephand}. What is worth mention
+that some methods provide predicted joints but some not, we calculate the metrics
+of some methods~\cite{tompson2014real,oberweger2015hands,oberweger2015training,
+zhou2016model,tang2014latent} available online and estimate the others from the
+figures in their paper.
+
+\textbf{NYU Dataset}
+We compare our method with several approaches on NYU dataset, including 3DCNN
+~\cite{ge2017_3D}, DeepModel~\cite{zhou2016model}, Feedback~\cite{oberweger2015training},
+DeepPrior~\cite{oberweger2015hands}, Matrix~\cite{sinha2016deephand}, HeatMap
+~\cite{tompson2014real}, Lie-X~\cite{xu2017lie}. The accuracy and the pre-joint
+error distance are shown in Figure~\ref{fig:Results}. Figure~\ref{fig:comparison NYU}
+reveals that our proposed method has a comparable performance with state-of-art methods.
+Our method outperform majority of methods except 3DCNN and Lie-X. Comparing with 3DCNN,
+our method is better on error threshold from 9-12mm and 60-80mm. Lie-X stands out over
+the range of 20-48mm, but our method overtakes at other threshold. Figure
+~\ref{fig:joint mean NYU} shows that the estimation of finger tip is not very accurate,
+but the average joint error is still the second best.
+
+The average error distance of different methods is shown in Table~\ref{tab:mean error NYU}.
+Generally, result shows that our method has a comparable performance with competing methods.
+Our method outperform ~\cite{tompson2014real,oberweger2015hands,oberweger2015training,zhou2016model}
+by a large margin, and is on par with ~\cite{xu2017lie}. For example, the average joint
+error for our method is 1.1mm lower than \cite{oberweger2015training}.
+
+To have an intuitive sense, we present some examples as depicted in Figure
+~\ref{fig:qualitative result}. Our \textbf{MSTN} could get an acceptable result
+even in extreme circumstance.
+
 \begin{table}[htbp]
   \centering
-  \caption{Comparison of different methods on NYU dataset.}
+  \caption{Mean error distance of different methods on NYU dataset.}
     \begin{tabular}{|l|c|}
     \hline
     Methods & \multicolumn{1}{l}{Average joint error (mm)} \\
@@ -447,271 +564,141 @@ The average error distance of different methods is shown in Table~\ref{tab:mean 
     DeepPrior~\cite{oberweger2015hands} & 19.73 \\
     Feedback~\cite{oberweger2015training} & 15.97 \\
     DeepModel~\cite{zhou2016model} & 16.90 \\
-    Lie-X~\cite{xu2017lie} & 14.51 \\
+    Lie-X~\cite{xu2017lie} & 14.59 \\
     Ours  & 14.83 \\
     \hline
     \end{tabular}%
   \label{tab:mean error NYU}%
 \end{table}%
+\textbf{ICVL Dataset}
+On ICVL dataset, we compare our proposed method against four approaches: CrossingNet
+~\cite{wan2017crossing}, LRF~\cite{tang2014latent}, DeepPrior~\cite{oberweger2015hands},
+DeepModel~\cite{zhou2016model} and LSN~\cite{wan2016direction}. The quantitative result
+is shown in Figure~\ref{fig:comparison ICVL}. Our \textbf{MSTN} is better than LRF,
+DeepPrior~\footnote{DeepPrior~\cite{oberweger2015hands} only provide test results on
+the first sequence on ICVL, the accuracy curve is plotted based on the provided result.},
+DeepModel and CrossingNet, and is roughly the same with LSN. Furthermore, Figure
+~\ref{fig:joint mean ICVL} reveals the same case that finger tips estimation is generally
+worse than the palm of hand. As summarized in Table~\ref{tab:mean error ICVL}, the mean
+error distance of our method is the lowest in four methods, and obtain a 1.4mm error
+decrease than DeepPrior.
 
 % Table generated by Excel2LaTeX from sheet 'average joint error'
 \begin{table}[htbp]
   \centering
-  \caption{Comparison of different methods on ICVL dataset.}
-    \begin{tabular}{|l|r|}\hline
+  \caption{Mean error distance of different methods on ICVL dataset.}
+    \begin{tabular}{|l|c|}\hline
     Methods & \multicolumn{1}{l}{Average joint error (mm)} \\\hline
-    LRF~\cite{tang2014latent}   &  0\\
-    DeepPrior~\cite{oberweger2015hands} &  0\\
-    DeepModel~\cite{zhou2016model} &  0\\
-    Ours  &  0\\
+    LRF~\cite{tang2014latent}   &  12.56\\
+    DeepPrior~\cite{oberweger2015hands} &  9.42\\
+    DeepModel~\cite{zhou2016model} &  11.55\\
+    CrossingNet~\cite{wan2017crossing} &10.22\\
+    \textbf{Ours}  &\textbf{8.04}\\
     \hline
     \end{tabular}%
   \label{tab:mean error ICVL}%
 \end{table}%
-\paragraph{NYU Dataset}\label{sec:nyu dataset}
-We compare our method with several approaches on NYU dataset, including 3DCNN~\cite{ge2017_3D}, DeepModel~\cite{zhou2016model}, 
-Feedback~\cite{oberweger2015training}, DeepPrior~\cite{oberweger2015hands}, Matrix~\cite{sinha2016deephand}, HeatMap~\cite{tompson2014real}, 
-Lie-X~\cite{xu2017lie}. The accuracy and the pre-joint error distance are shown in Figure~\ref{fig:comparison NYU}. The result reveals 
-that our proposed method has a comparable performance with state-of-art methods. Our method outperform most methods except 3DCNN and Lie-X. 
-Comparing with 3DCNN, our method is better around 9-12mm and 60-80mm. Lie-X stands out over the range of 20-48mm, but our method overtakes 
-at other times. 
 
 
-\begin{figure*}[t]\footnotesize
-\centering
-    \subfloat[]{
-        \label{fig:comparison NYU}
-        \begin{minipage}[t]{200pt}
-            \centering
-            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_comparison/comparison_frameswithin.pdf}
-        \end{minipage}
-    }
-    \subfloat[]{
-        \label{fig:joint mean NYU}
-        \begin{minipage}[t]{260pt}
-            \centering
-            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_comparison/comparison_joint_mean.pdf}
-        \end{minipage}
-    }
-    \caption{Qualitative results for NYU dataset.}
-    \label{fig:Qualitative result NYU}
-\end{figure*}
+\subsubsection{Ablation Study}\label{sec:ablation}
+For the sake of analyzing the effects of different parts in \textbf{MSTN}, we preform an extensive ablation
+experiments on NYU dataset. We show the result on NYU and ICVL dataset in Figure~\ref{fig:result ablation}.
+Figure~\ref{fig:ablation NYU} shows the accuracy of different parts in our method. In this figure, the curve denoted
+\textbf{3D} is the sliced 3D volumetric representation input branch in \emph{Spatial Network} and \textbf{Final}
+is our \textbf{MSTN}.
 
-\paragraph{ICVL Dataset}\label{sec:icvl dataset}
-On ICVL dataset, we compare our proposed method against three approaches~\cite{tang2014latent,oberweger2015hands,zhou2016model}.
-\subsubsection{Ablation}\label{sec:ablation}
-To show the effects of different parts in mixed network, we do the ablation experiments. We
-show the test result on NYU and ICVL dataset in Figure~\ref{fig:Qualitative result ablation}.
+\paragraph{Basic Network} \emph{Basic Network} is a simple network composed of convolution, max-pooling and fully 
+connected layers. The network regresses the labels directly, and the average error distance is shown in Table
+~\ref{tab:ablation NYU}. The result reveals that \emph{Basic Network} already surpass some methods.
 
-\begin{figure*}[t]\footnotesize
+\paragraph{Temporal Network} \emph{Temporal Network} replace the second fully connected layer with LSTM layer and
+concatenate the output with the input feature. Though the curve of \emph{Temporal Network}, we know that
+\emph{Temporal Network} slightly improve the performance due to the temporal information.
+
+\paragraph{Spatial Network} \emph{Spatial Network} hierarchically fuse the features from depth image input and
+sliced 3D volumetric representation. We could find that \textbf{3D} is the worst in several competitors. In our
+opinion, the bad performance is because the depth information is sacrificed in sliced 3D volumetric representation.
+Via the Deeply-Fusion network, \emph{Spatial Network} borrow the spatial information from \textbf{3D} branch, and
+achieve a better result than \emph{Basic Network} and \emph{3D Network}.
+
+\paragraph{MSTN} \textbf{MSTN} is the final network, which integrate \emph{Spatial Network} and \emph{Temporal Network}
+by \emph{Gate Network}. \emph{Gate Network} weights the predictions from two networks and yields the final prediction.
+Because of the temporal coherence and spatial information concerned, \textbf{MSTN} is the best in ablation experiments,
+and Figure~\ref{fig:ablation joint mean NYU} reveals that the joint error distance for every joint is the lowest.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Ablation study on NYU dataset.}
+    \begin{tabular}{|l|c|}
+    \hline
+    Methods & \multicolumn{1}{l}{Average joint error (mm)} \\
+    \hline
+    3D & 16.56 \\
+    Basic & 15.95 \\
+    Temporal & 15.47 \\
+    Spatial & 15.03 \\
+    MSTN & 14.83 \\
+    \hline
+    \end{tabular}%
+  \label{tab:ablation NYU}%
+\end{table}%
+
+\begin{figure}[htbp]\footnotesize
 \centering
     \subfloat[]{
         \label{fig:ablation NYU}
         \begin{minipage}[t]{200pt}
-            \centering
-            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_ablation/ablation_frameswithin.pdf}
+            \raggedleft
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU/ablation/ablation_frameswithin.pdf}
         \end{minipage}
     }
+    \\
     \subfloat[]{
         \label{fig:ablation joint mean NYU}
-        \begin{minipage}[t]{180pt}
-            \centering
-            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU_ablation/ablation_joint_mean.pdf}
+        \begin{minipage}[t]{200pt}
+             \raggedleft
+            \includegraphics[width=1\linewidth]{src/experiment/eval/NYU/ablation/ablation_joint_mean.pdf}
         \end{minipage}
     }
-    \caption{Qualitative results for ablation experiments.}
-    \label{fig:Qualitative result ablation}
+    \caption{Performance of different part in our proposed network. Figure(a): proportion of good frames over
+    different threshold for different part in our  proposed network (\textbf{3D} is the sliced 3D volumetric
+    representation input branch in \emph{Spatial Network}, \textbf{Basic} is \emph{Basic Network}, \textbf{
+    Spatial} is \emph{Spatial Network}, \textbf{Temporal} is \emph{Temporal Network}, and \textbf{Final}
+    is our proposed \textbf{MSTN}). Figure(b): per-joint error distance for different parts. The palm and fingers
+    are indexed as C: palm, T: thumb, I: index, M: middle, R: ring, P: pinky,W: wrist}
+    \label{fig:result ablation}
+\end{figure}
+
+\begin{figure*}[t]\footnotesize
+\centering
+    \includegraphics[width=1\linewidth]{src/experiment/qualitative_result.pdf}
+    \caption{Qualitative results for NYU and ICVL dataset.}
+\label{fig:qualitative result}
 \end{figure*}
 
 \section{Conclusion}\label{sec:conclusion}
-The conclusion goes here.
-
-% An example of a floating figure using the graphicx package.
-% Note that \label must occur AFTER (or within) \caption.
-% For figures, \caption should occur after the \includegraphics.
-% Note that IEEEtran v1.7 and later has special internal code that
-% is designed to preserve the operation of \label within \caption
-% even when the captionsoff option is in effect. However, because
-% of issues like this, it may be the safest practice to put all your
-% \label just after \caption rather than within \caption{}.
-%
-% Reminder: the "draftcls" or "draftclsnofoot", not "draft", class
-% option should be used if it is desired that the figures are to be
-% displayed while in draft mode.
-%
-%\begin{figure}[!t]
-%\centering
-%\includegraphics[width=2.5in]{myfigure}
-% where an .eps filename suffix will be assumed under latex,
-% and a .pdf suffix will be assumed for pdflatex; or what has been declared
-% via \DeclareGraphicsExtensions.
-%\caption{Simulation results for the network.}
-%\label{fig_sim}
-%\end{figure}
-
-% Note that the IEEE typically puts floats only at the top, even when this
-% results in a large percentage of a column being occupied by floats.
-
-
-% An example of a double column floating figure using two subfigures.
-% (The subfig.sty package must be loaded for this to work.)
-% The subfigure \label commands are set within each subfloat command,
-% and the \label for the overall figure must come after \caption.
-% \hfil is used as a separator to get equal spacing.
-% Watch out that the combined width of all the subfigures on a
-% line do not exceed the text width or a line break will occur.
-%
-%\begin{figure*}[!t]
-%\centering
-%\subfloat[Case I]{\includegraphics[width=2.5in]{box}%
-%\label{fig_first_case}}
-%\hfil
-%\subfloat[Case II]{\includegraphics[width=2.5in]{box}%
-%\label{fig_second_case}}
-%\caption{Simulation results for the network.}
-%\label{fig_sim}
-%\end{figure*}
-%
-% Note that often IEEE papers with subfigures do not employ subfigure
-% captions (using the optional argument to \subfloat[]), but instead will
-% reference/describe all of them (a), (b), etc., within the main caption.
-% Be aware that for subfig.sty to generate the (a), (b), etc., subfigure
-% labels, the optional argument to \subfloat must be present. If a
-% subcaption is not desired, just leave its contents blank,
-% e.g., \subfloat[].
-
-
-% An example of a floating table. Note that, for IEEE style tables, the
-% \caption command should come BEFORE the table and, given that table
-% captions serve much like titles, are usually capitalized except for words
-% such as a, an, and, as, at, but, by, for, in, nor, of, on, or, the, to
-% and up, which are usually not capitalized unless they are the first or
-% last word of the caption. Table text will default to \footnotesize as
-% the IEEE normally uses this smaller font for tables.
-% The \label must come after \caption as always.
-%
-%\begin{table}[!t]
-%% increase table row spacing, adjust to taste
-%\renewcommand{\arraystretch}{1.3}
-% if using array.sty, it might be a good idea to tweak the value of
-% \extrarowheight as needed to properly center the text within the cells
-%\caption{An Example of a Table}
-%\label{table_example}
-%\centering
-%% Some packages, such as MDW tools, offer better commands for making tables
-%% than the plain LaTeX2e tabular which is used here.
-%\begin{tabular}{|c||c|}
-%\hline
-%One & Two\\
-%\hline
-%Three & Four\\
-%\hline
-%\end{tabular}
-%\end{table}
-
-
-% Note that the IEEE does not put floats in the very first column
-% - or typically anywhere on the first page for that matter. Also,
-% in-text middle ("here") positioning is typically not used, but it
-% is allowed and encouraged for Computer Society conferences (but
-% not Computer Society journals). Most IEEE journals/conferences use
-% top floats exclusively.
-% Note that, LaTeX2e, unlike IEEE journals/conferences, places
-% footnotes above bottom floats. This can be corrected via the
-% \fnbelowfloat command of the stfloats package.
-
-% if have a single appendix:
-%\appendix[Proof of the Zonklar Equations]
-% or
-%\appendix  % for no appendix heading
-% do not use \section anymore after \appendix, only \section*
-% is possibly needed
-
-% use appendices with more than one appendix
-% then use \section to start each appendix
-% you must declare a \section before using any
-% \subsection or using \label (\appendices by itself
-% starts a section numbered zero.)
-%
-
+In this paper, we present a hand pose estimation method called Mixture of Spatial-and-Temporal Network (\textbf{MSTN})
+by keeping a watchful eye on accuracy, efficiency, robustness and stability. Our method extracts the features relate to
+temporal coherence and spatial information by \emph{Temporal Network} and \emph{Spatial Network} respectively. By adopting
+the Mixture of Experts framework, the predictions are weighted for final output. We evaluate \textbf{MSTN} on two publicly
+available datasets and the experiments demonstrate that our method achieves the comparable results with several state-of-art
+approaches.
 
 \appendices
-\section{Gate Network Architecture}\label{sec:gate network architecture}
-Appendix one text goes here.
 
 
 % use section* for acknowledgment
-\section*{Acknowledgment}
+%\section*{Acknowledgment}
 
 
-The persons would like to thank...
+%The persons would like to thank...
 
-
-% Can use something like this to put references on a page
-% by themselves when using endfloat and the captionsoff option.
 \ifCLASSOPTIONcaptionsoff
   \newpage
 \fi
 
-
-
-% trigger a \newpage just before the given reference
-% number - used to balance the columns on the last page
-% adjust value as needed - may need to be readjusted if
-% the document is modified later
-%\IEEEtriggeratref{8}
-% The "triggered" command can be changed if desired:
-%\IEEEtriggercmd{\enlargethispage{-5in}}
-
-% references section
-
-% can use a bibliography generated by BibTeX as a .bbl file
-% BibTeX documentation can be easily obtained at:
-% http://mirror.ctan.org/biblio/bibtex/contrib/doc/
-% The IEEEtran BibTeX style support page is at:
-% http://www.michaelshell.org/tex/ieeetran/bibtex/
-%\bibliographystyle{IEEEtran}
-% argument is your BibTeX string definitions and bibliography database(s)
-%\bibliography{IEEEabrv,../bib/paper}
-%
-% <OR> manually copy in the resultant .bbl file
-% set second argument of \begin to the number of references
-% (used to reserve space for the reference number labels box)
 \bibliography{wu}
 \bibliographystyle{IEEEtran}
-
-% biography section
-%
-% If you have an EPS/PDF photo (graphicx package needed) extra braces are
-% needed around the contents of the optional argument to biography to prevent
-% the LaTeX parser from getting confused when it sees the complicated
-% \includegraphics command within an optional argument. (You could create
-% your own custom macro containing the \includegraphics command to make things
-% simpler here.)
-%\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{mshell}}]{Michael Shell}
-% or if you just want to reserve a space for a photo:
-
-% insert where needed to balance the two columns on the last page with
-% biographies
-%\newpage
-
-%\begin{IEEEbiographynophoto}{Jane Doe}
-%Biography text here.
-%\end{IEEEbiographynophoto}
-
-% You can push biographies down or up by placing
-% a \vfill before or after them. The appropriate
-% use of \vfill depends on what kind of text is
-% on the last page and whether or not the columns
-% are being equalized.
-
-%\vfill
-
-% Can be used to pull up biographies so that the bottom of the last one
-% is flush with the other column.
-%\enlargethispage{-5in}
-
-
 
 % that's all folks
 \end{document}
