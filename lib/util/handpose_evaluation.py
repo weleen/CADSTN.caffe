@@ -403,7 +403,7 @@ class HandposeEvaluation(object):
         for i in range(len(self.jointConnections)):
             ax.plot(numpy.hstack((joint[self.jointConnections[i][0], 0], joint[self.jointConnections[i][1], 0])),
                     numpy.hstack((joint[self.jointConnections[i][0], 1], joint[self.jointConnections[i][1], 1])),
-                    c=(color if color is not 'nice' else self.jointConnectionColors[i]), linewidth=2.0)
+                    c=(color if color is not 'nice' else self.jointConnectionColors[i]), linewidth=5.0)
 
     def plotResult3D(self, frame, joint3D, filename=None, showGT=True, showPC=True, niceColors=False):
         """

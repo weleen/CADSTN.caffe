@@ -10,7 +10,7 @@ import time
 from data.importers import NYUImporter, ICVLImporter
 from data.dataset import NYUDataset, ICVLDataset
 
-root = '/home/wuyiming/Hand-dev'
+root = '/home/wuyiming/git/Hand-dev'
 cachePath = root + '/dataset/cache'
 DEBUG = False
 
@@ -426,9 +426,9 @@ if __name__ == '__main__':
     # data = DataRead(name='NYU', phase='test', dsize=(128, 128))
     # data_load = data.loadData()
 
-    data = DataRead(name='ICVL', phase='train', dsize=(128, 128), aug=True)
+    data = DataRead(name='ICVL', phase='test', dsize=(128, 128), aug=False)
     data_load = data.loadData()
-    sequence_generator = sequenceGenerator(8, 16, len(data_load['depth']), data_load, True, 'train')
+    sequence_generator = sequenceGenerator(1, 16, len(data_load['depth']), data_load, True, 'test')
     for i in range(100):
         batch = sequence_generator()
 

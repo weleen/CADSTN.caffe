@@ -19,51 +19,6 @@ from data.importers import ICVLImporter, DepthImporter
 
 DEBUG = False
 
-fx, fy, ux, uy = 241.42, 241.42, 160, 120
-def jointsImgTo3D(sample):
-    """
-    Normalize sample to metric 3D
-    :param sample: joints in (x,y,z) with x,y in image coordinates and z in mm
-    :return: normalized joints in mm
-    """
-    ret = np.zeros((sample.shape[0], 3), np.float32)
-    for i in range(sample.shape[0]):
-        ret[i] = jointImgTo3D(sample[i])
-    return ret
-
-
-def jointImgTo3D(sample):
-    """
-    Normalize sample to metric 3D
-    :param sample: joints in (x,y,z) with x,y in image coordinates and z in mm
-    :return: normalized joints in mm
-    """
-    ret = np.zeros((3,), np.float32)
-    # convert to metric using f
-    ret[0] = (sample[0] - ux) * sample[2] / fx
-    ret[1] = (sample[1] - uy) * sample[2] / fy
-    ret[2] = sample[2]
-    return ret
-
-def loadGt(gt_file):
-    """
-    load ground truth joint
-    loadGt(str) -> np.array
-    :param gt_file: path to ground truth file
-    :return: joint in xyz coordinate
-    """
-    gt = []
-    with open(gt_file, 'r') as f:
-        lines = f.readlines()
-        for line in lines:
-            gt.append(map(float, line.split(' ')[1:-1]))
-    gt = np.array(gt)
-    gt3D = []
-    for i in xrange(gt.shape[0]):
-        gt3D.append(jointsImgTo3D(gt[i].reshape(16, 3)))
-    gt3D = np.array(gt3D)
-    return gt3D
-
 def loadPredFile(filepath, estimation_mode='uvd'):
     """
     load the prediction file
@@ -83,7 +38,7 @@ def loadPredFile(filepath, estimation_mode='uvd'):
         dim = 3
         return joints.reshape(n, d/dim, dim)
 
-def predictJoints(model_name, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
+def predictJoints(model, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
     """
     predict joints in xyz coordinate
     predictJoints(str, str, bool, str, str) -> (np.array, str)
@@ -102,6 +57,14 @@ def predictJoints(model_name, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
     assert os.path.isfile(model_def), '{} is not a file!'.foramt(model_def)
     assert os.path.isfile(model_weights), '{} is not a file!'.format(model_weights)
 
+    if store:
+        # store the predicted xyz into files
+        file_name = '../result/OURS/' + dataset + '/hand_' + model_name + '_' + weights_num + '.txt'
+
+        if os.path.isfile(file_name):
+            print '{} exists, read file directly.'.format(file_name)
+            return loadPredFile(file_name), file_name
+
     print 'load prototxt from {}'.format(model_def)
     print 'load weights from {}'.format(model_weights)
 
@@ -110,6 +73,9 @@ def predictJoints(model_name, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
     # extract seq_size (video num), frame_size (frames in video) and joint_size (dimension need to regress) from the blob
     if 'baseline' in model_name:
         frame_size, joint_size = net.blobs['joint_pred_baseline'].data.shape
+        seq_size = 1
+    elif 'depth' in model_name:
+        frame_size, joint_size = net.blobs['joint_pred_depth'].data.shape
         seq_size = 1
     elif '3D' in model_name:
         if '3D_and_depth' in model_name:
@@ -125,14 +91,13 @@ def predictJoints(model_name, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
     dim = 3 # estimate 3 dimension x, y and z
     # recognize different dataset
     if dataset == 'ICVL':
-        test_num = 702
+        test_num = 1596 # 702 + 894
     else:
         assert 0, 'unknow dataset {}'.format(dataset)
 
     if gpu_or_cpu == 'gpu':
         caffe.set_device(0)
         caffe.set_mode_gpu()
-
 
     if DEBUG:
         print 'frame_size = ', frame_size
@@ -141,17 +106,10 @@ def predictJoints(model_name, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
         print 'dim = ', dim
         print 'using {} to run {} test dataset'.format(gpu_or_cpu, dataset)
 
-    if store:
-        # store the predicted xyz into files
-        file_name = '../result/OURS/' + dataset + '/hand_' + model_name + '_' + weights_num + '.txt'
-
-        if os.path.isfile(file_name):
-            print '{} exists, read file directly.'.format(file_name)
-            return loadPredFile(file_name), file_name
 
     # calculate the predicted joints in xyz coordinate
     predicted_joints = np.zeros((test_num, joint_size / dim, dim))
-
+    
     t_start = time.time()
     for i in xrange(np.int(np.ceil(float(test_num) / (frame_size * seq_size)))):
         net.forward()
@@ -160,22 +118,25 @@ def predictJoints(model_name, store=True, dataset='ICVL', gpu_or_cpu='gpu'):
             row = j / seq_size
             col = j % seq_size
             if model_name == 'baseline':
-                predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_baseline'].data[j].reshape(joint_size / dim, dim) * \
+                predicted_joints[int(ind)] = (net.blobs['joint_pred_baseline'].data[j].reshape(joint_size / dim, dim) * \
+                        net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
+            elif model_name == 'depth':
+                predicted_joints[int(ind)] = (net.blobs['joint_pred_depth'].data[j].reshape(joint_size / dim, dim) * \
                         net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
             elif '3D' in model_name:
                 if '3D_and_depth' in model_name:
-                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_depth_3D'].data[j].reshape(joint_size / dim, dim) * \
+                    predicted_joints[int(ind)] = (net.blobs['joint_pred_depth_3D'].data[j].reshape(joint_size / dim, dim) * \
                             net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
                 else:
-                    predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_3D'].data[j].reshape(joint_size / dim, dim) * \
+                    predicted_joints[int(ind)] = (net.blobs['joint_pred_3D'].data[j].reshape(joint_size / dim, dim) * \
                             net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
             elif 'mix' in model_name:
-                predicted_joints[int(ind) - 1] = (net.blobs['joint_pred_mix'].data[j].reshape(joint_size / dim, dim) * \
+                predicted_joints[int(ind)] = (net.blobs['joint_pred_mix'].data[j].reshape(joint_size / dim, dim) * \
                         net.blobs['config'].data[j][0] / 2 + net.blobs['com'].data[j].reshape(1, dim))
             else:
-                predicted_joints[int(ind)] = (net.blobs['pred_joint'].data[row][col].reshape(joint_size / dim, dim) \
-                                              * net.blobs['config'].data[j][0] / 2 \
-                                              + net.blobs['com'].data[j].reshape(1, 3)).copy()
+                predicted_joints[int(ind)] = (net.blobs['pred_joint_lstm'].data[row][col].reshape(joint_size / dim, dim) \
+                                                * net.blobs['config'].data[j][0] / 2 \
+                                                + net.blobs['com'].data[j].reshape(1, dim)).copy()
     t_end = time.time()
     print 'time elapse {}'.format((t_end - t_start) / test_num)
 
@@ -203,13 +164,12 @@ if __name__ == '__main__':
     # test ICVL dataset
     di = ICVLImporter('../dataset/ICVL/', cacheDir='../dataset/cache')
     gt3D = []
-    sequence1 = di.loadSequence('test_1', docom=True)
-    sequence2 = di.loadSequence('test_2', docom=True)
+    sequence1 = di.loadSequence('test_seq_1', docom=True)
+    sequence2 = di.loadSequence('test_seq_2', docom=True)
     testSeq = [sequence1, sequence2]
     for seq in testSeq:
         gt3D.extend([j.gt3Dorig for j in seq.data])
-    gt3D = np.array(gt3D)
-
+    
     if DEBUG:
         print 'gt3D.shape = ', gt3D.shape
 
@@ -219,15 +179,16 @@ if __name__ == '__main__':
     hpe = []
     eval_prefix = []
     # predict joint by ourselves in xyz coordinate
-    #model.append(('baseline','100000'))
-    #model.append(('3D_and_depth', '100000')) 
-    #model.append(('lstm','100000')) 
+    model.append(('3D', '100000'))
+    model.append(('depth','100000'))
+    model.append(('3D_and_depth', '100000')) 
+    model.append(('lstm','100000')) 
     model.append(('mix', '100000'))
     
     for ind in xrange(len(model)):
         joints, file_name = predictJoints(model[ind])
         pred_joints.append(joints)
-        eval_prefix.append('ICVL_' + model[ind] + '_' + weight_num[ind])
+        eval_prefix.append('ICVL_' + model[ind][0] + '_' + model[ind][1])
         if not os.path.exists('../eval/'+eval_prefix[ind]+'/'):
             os.makedirs('../eval/'+eval_prefix[ind]+'/')
 
@@ -241,7 +202,7 @@ if __name__ == '__main__':
         hpe[ind].subfolder += eval_prefix[ind]+'/'
         mean_error = hpe[ind].getMeanError()
         max_error = hpe[ind].getMaxError()
-        print("Test on {}_{}".format(model[ind], weight_num[ind]))
+        print("Test on {}_{}".format(model[ind][0], model[ind][1]))
         print("Mean error: {}mm, max error: {}mm".format(mean_error, max_error))
         print("MD score: {}".format(hpe[ind].getMDscore(80)))
 
@@ -255,7 +216,7 @@ if __name__ == '__main__':
     hpe_lrf.subfolder += 'comparison'
     print("Tang et al. ICCV 2014")
     print("Mean error: {}mm".format(hpe_lrf.getMeanError()))
-    plot_list.append("LRF", hpe_lrf)
+    plot_list.append(("LRF", hpe_lrf))
 
     # DeepPrior, result in first sequence
     data_deepprior = di.loadBaseline('../result/CVWW15/CVWW15_ICVL_Prior-Refinement.txt')
@@ -263,11 +224,11 @@ if __name__ == '__main__':
     hpe_deepprior.subfolder += 'comparison'
     print("Oberweger et al. CVWW 2015")
     print("Mean error: {}mm".format(hpe_deepprior.getMeanError()))
-    plot_list.append("DeepPrior", hpe_deepprior)
+    plot_list.append(("DeepPrior", hpe_deepprior))
     
     # ijcai16 deepmodel
     data_deepmodel = di.loadBaseline('../result/IJCAI16/IJCAI16_ICVL.txt')
-    hpe_deepmodel = NYUHandposeEvaluation(gt3D, data_deepmodel)
+    hpe_deepmodel = ICVLHandposeEvaluation(gt3D, data_deepmodel)
     hpe_deepmodel.subfolder += 'comparison/'
     print("Zhou et al. IJCAI 2016")
     print("Mean error: {}mm".format(hpe_deepmodel.getMeanError()))
@@ -277,7 +238,7 @@ if __name__ == '__main__':
 
     for index in xrange(len(hpe)):
         ind = 0
-        for i in testSeqs[0].data:
+        for i in testSeq[0].data:
             if ind % 20 != 0:
                 ind += 1
                 continue
