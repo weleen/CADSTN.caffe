@@ -253,6 +253,7 @@ layer {
       type: "constant"
       value: 0
     }
+    fix_parameters: true
   }
 }
 layer {
@@ -280,11 +281,11 @@ layer {
   bottom: "concat-feature"
   top: "pred_joint_lstm"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -303,6 +304,7 @@ layer {
   type: "Reshape"
   bottom: "pred_joint_lstm"
   top: "joint_pred_lstm"
+  propagate_down: false
   reshape_param {
     shape {
       dim: -1
@@ -839,12 +841,13 @@ layer {
   type: "InnerProduct"
   bottom: "FusionL3"
   top: "joint_pred_depth_3D"
+  propagate_down: false
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 0
+    decay_mult: 0
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   inner_product_param {
@@ -865,7 +868,7 @@ layer {
   bottom: "depth"
   top: "convL1_gate"
   convolution_param {
-    num_output: 64
+    num_output: 32
     kernel_size: 3
     pad: 1
     weight_filler {
@@ -899,7 +902,7 @@ layer {
   bottom: "poolL1_gate"
   top: "convL2_gate"
   convolution_param {
-    num_output: 128
+    num_output: 64
     kernel_size: 3
     pad: 1
     weight_filler {
@@ -933,7 +936,7 @@ layer {
   bottom: "poolL2_gate"
   top: "convL3_gate"
   convolution_param {
-    num_output: 256
+    num_output: 128
     kernel_size: 3
     pad: 1
     weight_filler {
@@ -973,7 +976,7 @@ layer {
     lr_mult: 2
   }
   inner_product_param {
-    num_output: 2048
+    num_output: 1024
     weight_filler {
       type: "xavier"
     }
@@ -1009,7 +1012,7 @@ layer {
     lr_mult: 2
   }
   inner_product_param {
-    num_output: 2048
+    num_output: 1024
     weight_filler {
       type: "xavier"
     }
@@ -1034,12 +1037,12 @@ layer {
   }
 }
 layer {
-  name: "gate"
+  name: "weight"
   type: "InnerProduct"
   bottom: "FC2_gate"
-  top: "gate"
+  top: "weight"
   inner_product_param {
-    num_output: 84
+    num_output: 42
     weight_filler {
       type: "xavier"
     }
@@ -1049,41 +1052,41 @@ layer {
   }
 }
 layer {
-  name: "gate_weight"
-  type: "Slice"
-  bottom: "gate"
-  top: "gate1"
-  top: "gate2"
-  slice_param {
-    axis: 1
-    slice_point: 42
+  name: "lstm_weight"
+  type: "Sigmoid"
+  bottom: "weight"
+  top: "lstm_weight"
+}
+layer {
+  name: "3D_weight"
+  type: "Power"
+  bottom: "lstm_weight"
+  top: "3D_weight"
+  power_param {
+    power: 1
+    scale: -1
+    shift: 1
   }
 }
 # prediction
 layer {
   name: "lstm_gate"
-  type: "Scale"
+  type: "Eltwise"
   bottom: "joint_pred_lstm"
-  bottom: "gate1"
+  bottom: "lstm_weight"
   top: "lstm_gate"
-  scale_param {
-    axis: 0
-    filler {
-      value: 0.5
-    }
+  eltwise_param {
+    operation: PROD
   }
 }
 layer {
   name: "3D_gate"
-  type: "Scale"
+  type: "Eltwise"
   bottom: "joint_pred_depth_3D"
-  bottom: "gate2"
+  bottom: "3D_weight"
   top: "3D_gate"
-  scale_param {
-    axis: 0
-    filler {
-      value: 0.5
-    }
+  eltwise_param {
+    operation: PROD
   }
 }
 layer {
@@ -1118,7 +1121,7 @@ layer {
   bottom: "joint_pred_lstm"
   bottom: "joint"
   top: "vis_loss_lstm"
-  loss_weight: 1
+  loss_weight: 0
 }
 layer {
   name: "vis_loss_3D"
@@ -1126,5 +1129,5 @@ layer {
   bottom: "joint_pred_depth_3D"
   bottom: "joint"
   top: "vis_loss_3D"
-  loss_weight: 1
+  loss_weight: 0
 }
